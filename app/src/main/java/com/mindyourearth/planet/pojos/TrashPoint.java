@@ -27,7 +27,7 @@ public class TrashPoint
         lat = latLng.latitude;
         longt = latLng.longitude;
         type = trashType;
-        dirty = 0L; clean =0L;
+        dirty = 1L; clean =0L;
     }
 
     public Long getTime()
