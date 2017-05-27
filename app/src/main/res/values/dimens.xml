@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="eight">8dp</dimen>
+    <dimen name="vertical_margin">16dp</dimen>
+    <dimen name="trash_select_image">32dp</dimen>
+    <dimen name="marker_dumping_size">32dp</dimen>
+</resources>

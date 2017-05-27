@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Mind your Earth</string>
+    <string name="title_activity_trash_map">Trash points</string>
+
+    <!--agreement dialog-->
+    <string name="title_dialog_agreement">Agreement</string>
+    <string name="message_dialog_agreement">The trash point that you will add must be valid.
+        The location that you will mark on the map is polluted with some kind of waste.
+    Being a habitant of Earth, you will mark such trash points very responsibly.</string>
+    <string name="btn_add_trash">add trash point</string>
+    <string name="i_agree">i agree</string>
+
+    <!--select type of dumping dialog-->
+    <string name="title_dialog_add_trash_point">Add a trash point</string>
+    <string name="dumping_land">Land dumping</string>
+    <string name="dumping_water">Water dumping</string>
+    <string name="dumping_air">Air dumping</string>
+
+    <!--fetching location progress dialog -->
+    <string name="fetching_location">getting your location…</string>
+
+    <!--invalid location dialog-->
+    <string name="invalid_location">Location not valid</string>
+    <string name="invalid_location_msg">You can only add trash point 5 kms from your current location</string>
+    <string name="saving_data">Saving trash point</string>
+    <string name="failed_to_add_trash_point">Failed to add trash point</string>
+    <string name="success_add_trash_point">Trash point added successfully</string>
+</resources>

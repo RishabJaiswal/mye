@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:paddingBottom="24dp"
+    android:paddingTop="20dp">
+
+    <LinearLayout
+        android:id="@+id/land_dumping"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="24dp"
+        android:paddingStart="24dp"
+        android:tag="land">
+
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_width="@dimen/trash_select_image"
+            android:layout_height="@dimen/trash_select_image"
+            app:srcCompat="@drawable/marker_land_dumping"
+            android:layout_marginRight="@dimen/vertical_margin"
+            android:layout_marginEnd="@dimen/vertical_margin"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dumping_land"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+
+    <!--water dumping-->
+
+    <LinearLayout
+        android:id="@+id/water_dumping"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="24dp"
+        android:paddingStart="24dp"
+        android:layout_below="@+id/land_dumping"
+        android:tag="water">
+
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_width="@dimen/trash_select_image"
+            android:layout_height="@dimen/trash_select_image"
+            app:srcCompat="@drawable/marker_water_dumping"
+            android:layout_marginRight="@dimen/vertical_margin"
+            android:layout_marginEnd="@dimen/vertical_margin"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dumping_water"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+
+    <!--air dumping-->
+
+    <LinearLayout
+        android:id="@+id/air_dumping"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="24dp"
+        android:paddingStart="24dp"
+        android:layout_below="@+id/water_dumping"
+        android:tag="air">
+
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_width="@dimen/trash_select_image"
+            android:layout_height="@dimen/trash_select_image"
+            app:srcCompat="@drawable/marker_air_dumping"
+            android:layout_marginRight="@dimen/vertical_margin"
+            android:layout_marginEnd="@dimen/vertical_margin"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dumping_air"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+
+
+</RelativeLayout>

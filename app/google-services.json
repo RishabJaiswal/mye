@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "664395733843",
+    "firebase_url": "https://mindyourearth-d935e.firebaseio.com",
+    "project_id": "mindyourearth-d935e",
+    "storage_bucket": "mindyourearth-d935e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664395733843:android:d0a3ff85e7a49825",
+        "android_client_info": {
+          "package_name": "com.mindyourearth.planet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "664395733843-pah8uihsro17ssl58mod2vjmkole5djd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mindyourearth.planet",
+            "certificate_hash": "9348a0b42ea2724d73eaeb2ed470220ebbf14a30"
+          }
+        },
+        {
+          "client_id": "664395733843-hksc54u67ae631384ofn0f9egqlmtjtb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrGaJYQF7Mol6ct7u2E5caH3sA8cIIU8E"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "664395733843-hksc54u67ae631384ofn0f9egqlmtjtb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
