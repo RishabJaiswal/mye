@@ -1,6 +1,7 @@
 package com.mindyourearth.planet.pojos;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;
 
 import java.util.ArrayList;
@@ -16,6 +17,8 @@ public class TrashPoint
     private Long time, dirty, clean;
     private Double lat, longt;
     private String type;
+    @Exclude
+    private String key;
 
     public TrashPoint()
     {
@@ -58,5 +61,15 @@ public class TrashPoint
     public String getType()
     {
         return type;
+    }
+
+    public String getKey()
+    {
+        return key;
+    }
+
+    public void setKey(String key)
+    {
+        this.key = key;
     }
 }

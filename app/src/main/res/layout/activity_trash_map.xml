@@ -3,7 +3,8 @@
     xmlns:map="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_height="match_parent"
-    android:layout_width="match_parent">
+    android:layout_width="match_parent"
+    android:animateLayoutChanges="true">
 
     <fragment
         android:id="@+id/map"
@@ -12,17 +13,22 @@
         android:layout_height="match_parent"
         tools:context="com.mindyourearth.planet.TrashMapActivity"/>
 
-    <Button
-        android:id="@+id/add_tash_point_button"
+    <android.support.v7.widget.AppCompatTextView
+        android:id="@+id/add_trash_point_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="@dimen/vertical_margin"
+        android:layout_marginBottom="24dp"
         android:background="@color/colorPrimary"
+        android:clickable="true"
+        android:drawablePadding="@dimen/eight"
+        android:focusable="true"
+        android:fontFamily="@font/regular"
+        android:gravity="center"
+        android:padding="@dimen/vertical_margin"
         android:text="@string/btn_add_trash"
         android:textColor="@android:color/white"
-        android:padding="@dimen/eight"
-        android:onClick="showAgreement"/>
+        android:textSize="@dimen/font_body_button"/>
 
 </RelativeLayout>

@@ -2,6 +2,7 @@ package com.mindyourearth.planet;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.app.DialogFragment;
 import android.app.ProgressDialog;
 import android.arch.lifecycle.AndroidViewModel;
 import android.arch.lifecycle.LifecycleActivity;
@@ -17,10 +18,11 @@ import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
 import android.support.graphics.drawable.VectorDrawableCompat;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.AppCompatTextView;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -45,9 +47,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCallback,
-        GoogleMap.OnMapClickListener, View.OnClickListener
+        GoogleMap.OnMapClickListener, View.OnClickListener, DialogInterface.OnCancelListener, GoogleMap.OnMarkerClickListener
 {
-    private GoogleMap mMap;
+    private GoogleMap googleMap;
     String tagForMarkerBitmap;
     AlertDialog typeOfDumpDialog;
     Marker userMarker;
@@ -57,63 +59,128 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_trash_map);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        //setting add trash button
+        AppCompatTextView addTrashButton = (AppCompatTextView) findViewById(R.id.add_trash_point_button);
+        Drawable leftDrawable = VectorDrawableCompat.create(getResources(), R.drawable.marker_land_dumping, getTheme());
+        addTrashButton.setCompoundDrawablesWithIntrinsicBounds(leftDrawable, null, null, null);
+        addTrashButton.setOnClickListener(this);
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap)
     {
-        mMap = googleMap;
+        this.googleMap = googleMap;
         getAllTrashPoints();
+        this.googleMap.setOnMarkerClickListener(this);
     }
 
     @Override
     public void onMapClick(LatLng latLng)
     {
-        //when user dismisses the type trash dialog
-        if (tagForMarkerBitmap==null)
-        {
-            mMap.setOnMapClickListener(null);
-            return;
-        }
         //checking if distance is greater than 5 kms
-        else if(getDistanceInKms(latLng, userMarker.getPosition())>5)
+        if (getDistanceInKms(latLng, userMarker.getPosition()) > 5)
         {
             AlertDialog alertDialog = new AlertDialog.Builder(this)
                     .setTitle(R.string.invalid_location)
                     .setMessage(R.string.invalid_location_msg)
                     .create();
             alertDialog.show();
-            mMap.setOnMapClickListener(null);
-            findViewById(R.id.add_tash_point_button).setVisibility(View.VISIBLE);
             return;
         }
-
-        //getting marker Bitmap
-        //add trash point to map and
-        //push it to Firebase database
-        Marker trashPointMarker = mMap.addMarker(new MarkerOptions()
-                .position(latLng)
-                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(tagForMarkerBitmap)))
-                .title("added trash point"));
-        pushTrashPointToFirebaseDB(trashPointMarker, tagForMarkerBitmap);
-
-        mMap.setOnMapClickListener(null);
-        findViewById(R.id.add_tash_point_button).setVisibility(View.VISIBLE);
+        else if(tagForMarkerBitmap!=null)
+        {
+            //getting marker Bitmap
+            //add trash point to map and
+            //push it to Firebase database
+            Marker trashPointMarker = googleMap.addMarker(new MarkerOptions()
+                    .position(latLng)
+                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(getTrashDrawable(tagForMarkerBitmap))))
+                    .title("added trash point"));
+            pushTrashPointToFirebaseDB(trashPointMarker, tagForMarkerBitmap);
+        }
+        googleMap.setOnMapClickListener(null);
+        findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
         tagForMarkerBitmap = null;
+    }
+
+
+    //marker click callback
+    @Override
+    public boolean onMarkerClick(Marker marker)
+    {
+        //getting trashpoint pojo object from marker tag
+        TrashPoint trashPoint = (TrashPoint) marker.getTag();
+
+        //dialog to show trashpoint details
+        final View trashDetailView = getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.dumping_land)
+                .setView(trashDetailView)
+                .setIcon(getTrashDrawable(trashPoint.getType()))
+                .create();
+        alertDialog.show();
+
+        //getching trash point data from firebase
+        FirebaseDatabase.getInstance().getReference("poi/" + trashPoint.getKey())
+                .addListenerForSingleValueEvent(new ValueEventListener()
+                {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot)
+                    {
+                        //hiding progress bar
+                        trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
+                        trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
+                        //setting values
+                        ((TextView)trashDetailView.findViewById(R.id.votes_clean_count))
+                                .setText(dataSnapshot.child("clean").getValue().toString());
+                        ((TextView)trashDetailView.findViewById(R.id.votes_dirty_count))
+                                .setText(dataSnapshot.child("dirty").getValue().toString());
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError)
+                    {
+                        trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
+                        TextView youSayText = (TextView) trashDetailView.findViewById(R.id.you_say);
+                        youSayText.setVisibility(View.VISIBLE);
+                        youSayText.setText(R.string.failed_to_get_votes);
+                    }
+                });
+        return true;
     }
 
     @Override
     public void onClick(View view)
     {
-        tagForMarkerBitmap = (String) view.getTag();
-        typeOfDumpDialog.cancel();
+        switch (view.getId())
+        {
+            case R.id.add_trash_point_button:
+                showAgreement(view);
+                break;
+            default:
+            {
+                tagForMarkerBitmap = (String) view.getTag();
+                typeOfDumpDialog.cancel();
+            }
+        }
     }
 
+    //callback when type of dumping dialog is dismissed
+    @Override
+    public void onCancel(DialogInterface dialogInterface)
+    {
+        //set map click listener
+        if(tagForMarkerBitmap!=null)
+            googleMap.setOnMapClickListener(TrashMapActivity.this);
+        else
+            findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
+    }
     //show dialog
     public void showAgreement(View view)
     {
@@ -143,15 +210,14 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                 if (location != null)
                                 {
                                     LatLng newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                                    if(userMarker == null)
+                                    if (userMarker == null)
                                     {
-                                        userMarker = mMap.addMarker(new MarkerOptions()
+                                        userMarker = googleMap.addMarker(new MarkerOptions()
                                                 .position(newLatLng)
                                                 .title("My location"));
-                                    }
-                                    else
+                                    } else
                                         userMarker.setPosition(newLatLng);
-                                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 14f));
+                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 14f));
 
                                     //show dialog to choose type of pollution
                                     if (typeOfDumpDialog == null)
@@ -164,6 +230,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                                 .setTitle(R.string.title_dialog_add_trash_point)
                                                 .setView(view)
                                                 .create();
+                                        typeOfDumpDialog.setOnCancelListener(TrashMapActivity.this);
                                     }
                                     typeOfDumpDialog.show();
                                 }
@@ -173,19 +240,20 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                 }
                             }
                         });
-
-                        //set map click listener
-                        mMap.setOnMapClickListener(TrashMapActivity.this);
                     }
                 })
                 .create();
-        alertDialog.show();
+        alertDialog.setOnCancelListener(this);
+        RetainableAlertDialog dialogFragment = new RetainableAlertDialog();
+        dialogFragment.setDialog(alertDialog);
+        dialogFragment.setRetainInstance(true);
+        dialogFragment.show(getSupportFragmentManager(), "asd");
     }
 
-    //drawable to bitmap
-    private Bitmap getMarkerBitmap(String trashType)
+    //getting drwable for trash types
+    private Drawable getTrashDrawable(String trashType)
     {
-        Drawable drawable;
+        Drawable drawable = null;
         switch (trashType)
         {
             case "land":
@@ -198,7 +266,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 drawable = VectorDrawableCompat.create(getResources(), R.drawable.marker_air_dumping, getTheme());
                 break;
         }
-
+        return drawable;
+    }
+    //drawable to bitmap
+    private Bitmap getMarkerBitmap(Drawable drawable)
+    {
         Bitmap bitmap = Bitmap.createBitmap(drawable.getMinimumWidth(), drawable.getMinimumHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -217,7 +289,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         destination.setLatitude(dest.latitude);
         destination.setLongitude(dest.longitude);
 
-        return source.distanceTo(destination)/1000;
+        return source.distanceTo(destination) / 1000;
     }
 
     //sending data to firebase database
@@ -238,12 +310,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             {
                 savingDataDialog.dismiss();
                 //failed to save trshPoint
-                if (databaseError!=null)
+                if (databaseError != null)
                 {
                     trashPointMarker.remove();
                     Toast.makeText(TrashMapActivity.this, R.string.failed_to_add_trash_point, Toast.LENGTH_LONG).show();
-                }
-                else
+                } else
                     Toast.makeText(TrashMapActivity.this, R.string.success_add_trash_point, Toast.LENGTH_LONG).show();
             }
         });
@@ -262,10 +333,12 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 for (DataSnapshot trashSnapshot : dataSnapshot.getChildren())
                 {
                     TrashPoint trashPoint = trashSnapshot.getValue(TrashPoint.class);
+                    trashPoint.setKey(trashSnapshot.getKey());
                     trashPoints.add(trashPoint);
-                    mMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(trashPoint.getLat(), trashPoint.getLongt()))
-                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(trashPoint.getType()))));
+                    Marker marker = googleMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(trashPoint.getLat(), trashPoint.getLongt()))
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(getTrashDrawable(trashPoint.getType())))));
+                    marker.setTag(trashPoint);
                 }
             }
 

@@ -7,8 +7,8 @@
     <string name="message_dialog_agreement">The trash point that you will add must be valid.
         The location that you will mark on the map is polluted with some kind of waste.
     Being a habitant of Earth, you will mark such trash points very responsibly.</string>
-    <string name="btn_add_trash">add trash point</string>
     <string name="i_agree">i agree</string>
+    <string name="btn_add_trash">ADD A TRASH POINT</string>
 
     <!--select type of dumping dialog-->
     <string name="title_dialog_add_trash_point">Add a trash point</string>
@@ -25,4 +25,11 @@
     <string name="saving_data">Saving trash point</string>
     <string name="failed_to_add_trash_point">Failed to add trash point</string>
     <string name="success_add_trash_point">Trash point added successfully</string>
+    <string name="it_clean">It\'s clean</string>
+    <string name="people_say">people say</string>
+    <string name="its_dirty">not clean</string>
+    <string name="you_say">You say</string>
+    <string name="share_trash_point">Share trash point</string>
+    <string name="share_description">share image/link of the trash</string>
+    <string name="failed_to_get_votes">Error</string>
 </resources>
