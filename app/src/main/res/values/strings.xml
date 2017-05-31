@@ -15,16 +15,26 @@
     <string name="dumping_land">Land dumping</string>
     <string name="dumping_water">Water dumping</string>
     <string name="dumping_air">Air dumping</string>
+    <string name="dumping_food">Food wastage</string>
+    <string name="trash_markers_left">Trash markers left :</string>
+    <string name="trash_markers_renew">your trash markers will renew each day</string>
 
     <!--fetching location progress dialog -->
     <string name="fetching_location">getting your location…</string>
+    <string name="location_error">Unable to get location</string>
 
     <!--invalid location dialog-->
     <string name="invalid_location">Location not valid</string>
-    <string name="invalid_location_msg">You can only add trash point 5 kms from your current location</string>
+    <string name="invalid_location_msg">You can only add trash point 2 kms from your current location</string>
+
+    <!--saving trash point progress dialog-->
     <string name="saving_data">Saving trash point</string>
+
+    <!--response after trying to save trash point to firebase database-->
     <string name="failed_to_add_trash_point">Failed to add trash point</string>
     <string name="success_add_trash_point">Trash point added successfully</string>
+
+    <!--trash point detail dialog-->
     <string name="it_clean">It\'s clean</string>
     <string name="people_say">people say</string>
     <string name="its_dirty">not clean</string>
@@ -32,4 +42,14 @@
     <string name="share_trash_point">Share trash point</string>
     <string name="share_description">share image/link of the trash</string>
     <string name="failed_to_get_votes">Error</string>
+
+    <!--default preferences-->
+    <string name="pref_count">count</string>
+    <string name="pref_last_marker_timestamp">lastMarkerTimestamp</string>
+
+    <!--rewarded video dialog-->
+    <string name="watch_viedo_to_earn">Watch video to earn 3 more trash marker</string>
+    <string name="watch_to_earn_description">You can only add 3 trash points per day. To earn and add more trash points, watch a video. The earned trash markers are valid to be used today only.</string>
+    <string name="watch_video">WATCH VIDEO</string>
+    <string name="get_three_markers">Get 3 more trash markers</string>
 </resources>

@@ -2,32 +2,45 @@ package com.mindyourearth.planet;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
-import android.app.DialogFragment;
-import android.app.ProgressDialog;
 import android.arch.lifecycle.AndroidViewModel;
 import android.arch.lifecycle.LifecycleActivity;
 import android.arch.lifecycle.LiveData;
+import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
-import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.graphics.drawable.VectorDrawableCompat;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatTextView;
+import android.text.format.DateUtils;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -44,21 +57,52 @@ import com.google.firebase.database.ValueEventListener;
 import com.mindyourearth.planet.pojos.TrashPoint;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCallback,
-        GoogleMap.OnMapClickListener, View.OnClickListener, DialogInterface.OnCancelListener, GoogleMap.OnMarkerClickListener
+        GoogleMap.OnMapClickListener, View.OnClickListener, GoogleMap.OnMarkerClickListener,
+        AgreementDialog.AgreementAcceptCallback, TrashDumpingSelectDialog.TrashTypeSelectListener,
+        RetainableProgressDialog.ProgressableActivity
 {
+    private static final int PERMISSIONS_REQUEST_CODE = 1;
     private GoogleMap googleMap;
-    String tagForMarkerBitmap;
-    AlertDialog typeOfDumpDialog;
-    Marker userMarker;
+    private String tagForMarkerBitmap;
+    private Marker userMarker;
+    private RetainableProgressDialog currProgressDialog;
+    private LocationLiveData locationLiveData;
+    private Observer<Location> locationObserver;
+    private boolean isObservingLocation, isTrashSelectDialogVisible;
+    private long trashCount;
+
+    View tapOnMap, locateMe;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_trash_map);
+        tapOnMap = findViewById(R.id.tap_on_map);
+        locateMe = findViewById(R.id.locate_me);
+        locateMe.setOnClickListener(this);
+
+        //checking if location is being observed on configuration changes too
+        if (savedInstanceState != null)
+        {
+            isObservingLocation = savedInstanceState.getBoolean("isObservingLocation");
+            tagForMarkerBitmap = savedInstanceState.getString("tagForMarker");
+            isTrashSelectDialogVisible = savedInstanceState.getBoolean("isTrashSelecting");
+
+            if (isObservingLocation)
+            {
+                findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
+                if (tagForMarkerBitmap != null)
+                {
+                    tapOnMap.setVisibility(View.VISIBLE);
+                    locateMe.setVisibility(View.VISIBLE);
+                }
+            }
+        }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -73,18 +117,72 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     }
 
     @Override
-    public void onMapReady(GoogleMap googleMap)
+    protected void onSaveInstanceState(Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("isObservingLocation", isObservingLocation);
+        outState.putString("tagForMarker", tagForMarkerBitmap);
+        outState.putBoolean("isTrashSelecting", isTrashSelectDialogVisible);
+    }
+
+    @Override
+    public void onMapReady(final GoogleMap googleMap)
     {
         this.googleMap = googleMap;
-        getAllTrashPoints();
         this.googleMap.setOnMarkerClickListener(this);
+
+        //observing required live data
+        ViewModelProviders.of(this).get(MyViewModel.class)
+                .getTrashPointsSnapShotLD()
+                .observe(this, new Observer<List<Object>>()
+                {
+                    @Override
+                    public void onChanged(@Nullable List<Object> trashPointsOrError)
+                    {
+                        if (trashPointsOrError.size() == 0)
+                        {
+                            //todo: check for null trashPointsOrError too
+                            //todo: show progress dialog
+                        } else if (trashPointsOrError.get(0) != null)
+                        {
+                            //adding markers on the google map
+                            DataSnapshot dataSnapshot = (DataSnapshot) trashPointsOrError.get(0);
+                            for (DataSnapshot trashSnapshot : dataSnapshot.getChildren())
+                            {
+                                TrashPoint trashPoint = trashSnapshot.getValue(TrashPoint.class);
+                                trashPoint.setKey(trashSnapshot.getKey());
+                                Marker marker = googleMap.addMarker(new MarkerOptions()
+                                        .position(new LatLng(trashPoint.getLat(), trashPoint.getLongt()))
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(getTrashDrawable(trashPoint.getType())))));
+                                marker.setTag(trashPoint);
+                                trashCount++;
+                            }
+                            ((TextView)findViewById(R.id.trash_count)).setText(""+trashCount + " " +"trash points");
+                        } else
+                        {
+                            //todo: show error
+                        }
+
+                    }
+                });
+
+        // checking for location observers
+        if (isObservingLocation)
+            startLocationObserving();
+
+        //checking if user has already selected
+        //a trash type point to add
+        if (tagForMarkerBitmap != null)
+            this.googleMap.setOnMapClickListener(this);
     }
 
     @Override
     public void onMapClick(LatLng latLng)
     {
+        tapOnMap.setVisibility(View.GONE);
+        locateMe.setVisibility(View.GONE);
         //checking if distance is greater than 5 kms
-        if (getDistanceInKms(latLng, userMarker.getPosition()) > 5)
+        if (getDistanceInKms(latLng, userMarker.getPosition()) > 2)
         {
             AlertDialog alertDialog = new AlertDialog.Builder(this)
                     .setTitle(R.string.invalid_location)
@@ -92,8 +190,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     .create();
             alertDialog.show();
             return;
-        }
-        else if(tagForMarkerBitmap!=null)
+        } else if (tagForMarkerBitmap != null)
         {
             //getting marker Bitmap
             //add trash point to map and
@@ -104,11 +201,12 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     .title("added trash point"));
             pushTrashPointToFirebaseDB(trashPointMarker, tagForMarkerBitmap);
         }
+        //cleaning
         googleMap.setOnMapClickListener(null);
-        findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
         tagForMarkerBitmap = null;
+        //stop location observation
+        stopLocationObserving();
     }
-
 
     //marker click callback
     @Override
@@ -116,17 +214,22 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
         //getting trashpoint pojo object from marker tag
         TrashPoint trashPoint = (TrashPoint) marker.getTag();
-
-        //dialog to show trashpoint details
         final View trashDetailView = getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
-        AlertDialog alertDialog = new AlertDialog.Builder(this)
-                .setTitle(R.string.dumping_land)
-                .setView(trashDetailView)
-                .setIcon(getTrashDrawable(trashPoint.getType()))
-                .create();
-        alertDialog.show();
+        try
+        {
+            //dialog to show trashpoint details
+            AlertDialog alertDialog = new AlertDialog.Builder(this)
+                    .setTitle(R.string.dumping_land)
+                    .setView(trashDetailView)
+                    .setIcon(getTrashDrawable(trashPoint.getType()))
+                    .create();
+            alertDialog.show();
+        } catch (NullPointerException npe)
+        {
+            return true;
+        }
 
-        //getching trash point data from firebase
+        //fetching trash point data from firebase
         FirebaseDatabase.getInstance().getReference("poi/" + trashPoint.getKey())
                 .addListenerForSingleValueEvent(new ValueEventListener()
                 {
@@ -136,10 +239,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                         //hiding progress bar
                         trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
                         trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
+
                         //setting values
-                        ((TextView)trashDetailView.findViewById(R.id.votes_clean_count))
+                        ((TextView) trashDetailView.findViewById(R.id.votes_clean_count))
                                 .setText(dataSnapshot.child("clean").getValue().toString());
-                        ((TextView)trashDetailView.findViewById(R.id.votes_dirty_count))
+                        ((TextView) trashDetailView.findViewById(R.id.votes_dirty_count))
                                 .setText(dataSnapshot.child("dirty").getValue().toString());
                     }
 
@@ -161,93 +265,127 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         switch (view.getId())
         {
             case R.id.add_trash_point_button:
-                showAgreement(view);
-                break;
-            default:
             {
-                tagForMarkerBitmap = (String) view.getTag();
-                typeOfDumpDialog.cancel();
+                //checking location permissions
+                if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED)
+                {
+                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_FINE_LOCATION))
+                    {
+                        //todo: maybe create custom dialog
+                        ActivityCompat.requestPermissions(this,
+                                new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION},
+                                PERMISSIONS_REQUEST_CODE);
+                    }
+                    //openig app's permission page
+                    else
+                    {
+                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.fromParts("package", getPackageName(), null));
+                        startActivityForResult(intent, PERMISSIONS_REQUEST_CODE);
+                    }
+                    return;
+                }
+
+                //start listening location updates
+                AgreementDialog agreementDialog = new AgreementDialog();
+                agreementDialog.show(getSupportFragmentManager(), "agreement");
+                break;
+            }
+            case R.id.locate_me:
+            {
+                if (userMarker != null)
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userMarker.getPosition(), 16f));
+                break;
             }
         }
     }
 
-    //callback when type of dumping dialog is dismissed
     @Override
-    public void onCancel(DialogInterface dialogInterface)
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
-        //set map click listener
-        if(tagForMarkerBitmap!=null)
-            googleMap.setOnMapClickListener(TrashMapActivity.this);
-        else
-            findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == PERMISSIONS_REQUEST_CODE && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED)
+        {
+            //start listening location updates
+            AgreementDialog agreementDialog = new AgreementDialog();
+            agreementDialog.show(getSupportFragmentManager(), "agreement");
+        }
     }
-    //show dialog
-    public void showAgreement(View view)
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
     {
-        view.setVisibility(View.GONE);
-        AlertDialog alertDialog = new AlertDialog.Builder(this)
-                .setTitle(R.string.title_dialog_agreement)
-                .setMessage(R.string.message_dialog_agreement)
-                .setPositiveButton(R.string.i_agree, new DialogInterface.OnClickListener()
-                {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i)
-                    {
-                        //progress dialog
-                        final ProgressDialog progressDialog = new ProgressDialog(TrashMapActivity.this);
-                        progressDialog.setMessage(getString(R.string.fetching_location));
-                        progressDialog.setCancelable(false);
-                        progressDialog.show();
+        if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                grantResults[1] == PackageManager.PERMISSION_GRANTED)
+        {
+            //start listening location updates
+            AgreementDialog agreementDialog = new AgreementDialog();
+            agreementDialog.show(getSupportFragmentManager(), "agreement");
+        }
+    }
 
-                        //observing userLocation
-                        MyViewModel myViewModel = ViewModelProviders.of(TrashMapActivity.this).get(MyViewModel.class);
-                        myViewModel.getUserLocation().observe(TrashMapActivity.this, new Observer<Location>()
-                        {
-                            @Override
-                            public void onChanged(@Nullable Location location)
-                            {
-                                progressDialog.dismiss();
-                                if (location != null)
-                                {
-                                    LatLng newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                                    if (userMarker == null)
-                                    {
-                                        userMarker = googleMap.addMarker(new MarkerOptions()
-                                                .position(newLatLng)
-                                                .title("My location"));
-                                    } else
-                                        userMarker.setPosition(newLatLng);
-                                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 14f));
+    //when agreement is accepted
+    @Override
+    public void onAccept()
+    {
+        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+        String keyCount = getString(R.string.pref_count);
+        String keyLastMarkerTimeStamp = getString(R.string.pref_last_marker_timestamp);
+        int markerCount = getPreferences(Context.MODE_PRIVATE).getInt(keyCount, -1);
+        long lastMarkerTimestamp = preferences.getLong(keyLastMarkerTimeStamp, 1);
 
-                                    //show dialog to choose type of pollution
-                                    if (typeOfDumpDialog == null)
-                                    {
-                                        View view = getLayoutInflater().inflate(R.layout.dialog_add_trash_point, null);
-                                        view.findViewById(R.id.land_dumping).setOnClickListener(TrashMapActivity.this);
-                                        view.findViewById(R.id.water_dumping).setOnClickListener(TrashMapActivity.this);
-                                        view.findViewById(R.id.air_dumping).setOnClickListener(TrashMapActivity.this);
-                                        typeOfDumpDialog = new AlertDialog.Builder(TrashMapActivity.this)
-                                                .setTitle(R.string.title_dialog_add_trash_point)
-                                                .setView(view)
-                                                .create();
-                                        typeOfDumpDialog.setOnCancelListener(TrashMapActivity.this);
-                                    }
-                                    typeOfDumpDialog.show();
-                                }
-                                //google api connection error
-                                else
-                                {
-                                }
-                            }
-                        });
-                    }
-                })
-                .create();
-        alertDialog.setOnCancelListener(this);
-        RetainableAlertDialog dialogFragment = new RetainableAlertDialog();
-        dialogFragment.setDialog(alertDialog);
-        dialogFragment.setRetainInstance(true);
-        dialogFragment.show(getSupportFragmentManager(), "asd");
+        //checking is markers are expired
+        if (markerCount == 0 && DateUtils.isToday(lastMarkerTimestamp))
+        {
+            //todo: handle this when all markers exhausted
+            //show rewarded ad to ad markers
+            ShowRewVideoDialog showRewVideoDialog = new ShowRewVideoDialog();
+            showRewVideoDialog.show(getSupportFragmentManager(), "showRewardedVideo");
+            findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
+            return;
+        }
+        //this is where initial count of markers is set
+        else if(markerCount==-1 || !DateUtils.isToday(lastMarkerTimestamp))
+            preferences.edit().putInt(keyCount, 3).apply();
+
+        //progress dialog
+        RetainableProgressDialog progressDialog = new RetainableProgressDialog();
+        Bundle args = new Bundle();
+        args.putInt("msg", R.string.fetching_location);
+        progressDialog.setArguments(args);
+        progressDialog.show(getSupportFragmentManager(), "gettingLocation");
+        setProgressDialog(progressDialog);
+
+        //observing userLocation
+        startLocationObserving();
+    }
+
+    //on dialog's trash type select
+    @Override
+    public void onTrashTypeSelected(String tag)
+    {
+        tagForMarkerBitmap = tag;
+        googleMap.setOnMapClickListener(this);
+        isTrashSelectDialogVisible = false;
+        tapOnMap.setVisibility(View.VISIBLE);
+        locateMe.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void setProgressDialog(RetainableProgressDialog progressDialog)
+    {
+        currProgressDialog = progressDialog;
+    }
+
+    @Override
+    public RetainableProgressDialog getProgressDialog()
+    {
+        return currProgressDialog;
     }
 
     //getting drwable for trash types
@@ -268,6 +406,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         }
         return drawable;
     }
+
     //drawable to bitmap
     private Bitmap getMarkerBitmap(Drawable drawable)
     {
@@ -296,10 +435,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private void pushTrashPointToFirebaseDB(final Marker trashPointMarker, String trashType)
     {
         //showing progress
-        final ProgressDialog savingDataDialog = new ProgressDialog(this);
-        savingDataDialog.setMessage(getString(R.string.saving_data));
-        savingDataDialog.setCancelable(false);
-        savingDataDialog.show();
+        Bundle args = new Bundle();
+        args.putInt("msg", R.string.saving_data);
+        RetainableProgressDialog progressDialog = new RetainableProgressDialog();
+        progressDialog.setArguments(args);
+        progressDialog.show(getSupportFragmentManager(), "progressDialog");
 
         //saving data
         DatabaseReference trashPointRef = FirebaseDatabase.getInstance().getReference("poi").push();
@@ -308,72 +448,145 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference)
             {
-                savingDataDialog.dismiss();
+                currProgressDialog.dismiss();
+                if (databaseError == null)
+                {
+                    Toast.makeText(TrashMapActivity.this, R.string.success_add_trash_point, Toast.LENGTH_LONG).show();
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(trashPointMarker.getPosition(), 16f));
+
+                    //saving count and time stamp in shared preferences
+                    SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    String keyCount = getString(R.string.pref_count);
+                    editor.putInt(keyCount, preferences.getInt(keyCount, 0) - 1);
+                    editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
+                    editor.apply();
+                }
                 //failed to save trshPoint
-                if (databaseError != null)
+                else
                 {
                     trashPointMarker.remove();
                     Toast.makeText(TrashMapActivity.this, R.string.failed_to_add_trash_point, Toast.LENGTH_LONG).show();
-                } else
-                    Toast.makeText(TrashMapActivity.this, R.string.success_add_trash_point, Toast.LENGTH_LONG).show();
+                }
             }
         });
     }
 
-    //getting all trash points
-    private void getAllTrashPoints()
+    //stop observing location
+    public void stopLocationObserving()
     {
-        final List<TrashPoint> trashPoints = new ArrayList<>();
-        DatabaseReference poiRef = FirebaseDatabase.getInstance().getReference("poi");
-        poiRef.addListenerForSingleValueEvent(new ValueEventListener()
+        findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
+        isObservingLocation = false;
+        locationLiveData.removeObserver(locationObserver);
+        if(userMarker!=null)
+        {
+            userMarker.remove();
+            userMarker = null;
+        }
+        isTrashSelectDialogVisible=false;
+    }
+
+    //setting location observer
+    private void startLocationObserving()
+    {
+        isObservingLocation = true;
+        locationObserver = new Observer<Location>()
         {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot)
+            public void onChanged(@Nullable Location location)
             {
-                for (DataSnapshot trashSnapshot : dataSnapshot.getChildren())
+                if (currProgressDialog != null)
+                    currProgressDialog.dismiss();
+                if (location != null)
                 {
-                    TrashPoint trashPoint = trashSnapshot.getValue(TrashPoint.class);
-                    trashPoint.setKey(trashSnapshot.getKey());
-                    trashPoints.add(trashPoint);
-                    Marker marker = googleMap.addMarker(new MarkerOptions()
-                            .position(new LatLng(trashPoint.getLat(), trashPoint.getLongt()))
-                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(getTrashDrawable(trashPoint.getType())))));
-                    marker.setTag(trashPoint);
+                    //show dialog to choose type of pollution
+                    if (!isTrashSelectDialogVisible && tagForMarkerBitmap == null)
+                    {
+                        TrashDumpingSelectDialog trashDumpingSelectDialog = new TrashDumpingSelectDialog();
+                        trashDumpingSelectDialog.show(getSupportFragmentManager(), "selectTrashType");
+                        isTrashSelectDialogVisible = true;
+                    }
+
+                    //todo: debug when device rotates
+                    LatLng newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    if (userMarker == null)
+                    {
+                        userMarker = googleMap.addMarker(new MarkerOptions()
+                                .position(newLatLng)
+                                .title("My location"));
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 16f));
+                    }
+                    else
+                        userMarker.setPosition(newLatLng);
+                }
+                //google api connection error
+                else
+                {
+                    Toast.makeText(TrashMapActivity.this, R.string.location_error, Toast.LENGTH_LONG).show();
+                    //todo: handle connection error
                 }
             }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError)
-            {
-
-            }
-        });
+        };
+        //start observing location
+        locationLiveData = ViewModelProviders.of(TrashMapActivity.this).get(MyViewModel.class)
+                .getUserLocation();
+        locationLiveData.observe(TrashMapActivity.this, locationObserver);
     }
 }
 
 //view model for this activity
 class MyViewModel extends AndroidViewModel
 {
+    //user's Location data
     private LocationLiveData locationLiveData;
+    private MutableLiveData<List<Object>> trashPointsSnapShotOrErrorLD = new MutableLiveData<>();
 
     public MyViewModel(Application application)
     {
         super(application);
     }
 
-    LocationLiveData getUserLocation()
+    //user location
+    public LocationLiveData getUserLocation()
     {
         if (locationLiveData == null)
             locationLiveData = new LocationLiveData(this.getApplication());
         return locationLiveData;
     }
+
+    //getting all trash points
+    public MutableLiveData<List<Object>> getTrashPointsSnapShotLD()
+    {
+        //this list represents success and error elemets
+        //if datasnapshot is null ;i.e; failure
+        final List<Object> trashPointsOrError = new ArrayList<>();
+        DatabaseReference poiRef = FirebaseDatabase.getInstance().getReference("poi");
+        poiRef.addListenerForSingleValueEvent(new ValueEventListener()
+        {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot)
+            {
+                trashPointsOrError.add(0, dataSnapshot);
+                trashPointsSnapShotOrErrorLD.setValue(trashPointsOrError);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError)
+            {
+                trashPointsOrError.add(0, null);
+                trashPointsSnapShotOrErrorLD.setValue(trashPointsOrError);
+            }
+        });
+        return trashPointsSnapShotOrErrorLD;
+    }
 }
 
 //googleApiClient LiveData for fetching user location
 class LocationLiveData extends LiveData<Location> implements GoogleApiClient.OnConnectionFailedListener,
-        GoogleApiClient.ConnectionCallbacks
+        GoogleApiClient.ConnectionCallbacks, LocationListener
 {
     private GoogleApiClient googleApiClient;
+    private LocationRequest locationRequest;
     private Context context;
 
     public LocationLiveData(Context context)
@@ -392,27 +605,65 @@ class LocationLiveData extends LiveData<Location> implements GoogleApiClient.OnC
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
                     .build();
-            googleApiClient.connect();
         }
+        googleApiClient.connect();
     }
 
     @Override
     protected void onInactive()
     {
         super.onInactive();
+        if (googleApiClient.isConnected() && locationRequest != null)
+            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, LocationLiveData.this);
         googleApiClient.disconnect();
+
     }
 
     //connection calbacks
     @Override
     public void onConnected(@Nullable Bundle bundle)
     {
-        @SuppressLint("MissingPermission")
-        Location lastKnownLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
-        if (lastKnownLocation != null)
-            setValue(lastKnownLocation);
-
         //regularly updating user location
+        if (locationRequest == null)
+        {
+            locationRequest = new LocationRequest();
+            locationRequest.setInterval(5000);
+            locationRequest.setFastestInterval(6000);
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        }
+
+        //checking setting
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
+        PendingResult<LocationSettingsResult> pendingResult = LocationServices.SettingsApi
+                .checkLocationSettings(googleApiClient, builder.build());
+
+        //checking result callbacks
+        pendingResult.setResultCallback(new ResultCallback<LocationSettingsResult>()
+        {
+            @SuppressLint("MissingPermission")
+            public void onResult(@NonNull LocationSettingsResult locationSettingsResult)
+            {
+                Status status = locationSettingsResult.getStatus();
+                switch (status.getStatusCode())
+                {
+                    case LocationSettingsStatusCodes.SUCCESS:
+                    {
+                        LocationServices.FusedLocationApi
+                                .requestLocationUpdates(googleApiClient, locationRequest, LocationLiveData.this);
+                        break;
+                    }
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                    {
+                        //todo: resolve --> status.getResolution()
+                        break;
+                    }
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                    {
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -425,5 +676,11 @@ class LocationLiveData extends LiveData<Location> implements GoogleApiClient.OnC
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult)
     {
         setValue(null);
+    }
+
+    @Override
+    public void onLocationChanged(Location location)
+    {
+        setValue(location);
     }
 }

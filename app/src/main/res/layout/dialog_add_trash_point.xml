@@ -8,7 +8,34 @@
     android:paddingTop="20dp">
 
     <LinearLayout
+        android:id="@+id/trash_counter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1000"
+        android:paddingLeft="24dp"
+        android:paddingStart="24dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/trash_marker_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/trash_markers_left"
+            android:textColor="@color/blue"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/trash_markers_renew"
+            android:textSize="@dimen/font_caption"/>
+
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/land_dumping"
+        android:layout_below="@+id/trash_counter"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:gravity="center_vertical"
@@ -74,6 +101,32 @@
             android:layout_width="@dimen/trash_select_image"
             android:layout_height="@dimen/trash_select_image"
             app:srcCompat="@drawable/marker_air_dumping"
+            android:layout_marginRight="@dimen/vertical_margin"
+            android:layout_marginEnd="@dimen/vertical_margin"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dumping_air"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+
+    <!--food wastage-->
+    <LinearLayout
+        android:id="@+id/food_wastage"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="24dp"
+        android:paddingStart="24dp"
+        android:layout_below="@+id/air_dumping"
+        android:tag="air">
+
+        <android.support.v7.widget.AppCompatImageView
+            android:layout_width="@dimen/trash_select_image"
+            android:layout_height="@dimen/trash_select_image"
+            app:srcCompat="@drawable/marker_food_waste"
             android:layout_marginRight="@dimen/vertical_margin"
             android:layout_marginEnd="@dimen/vertical_margin"/>
 
