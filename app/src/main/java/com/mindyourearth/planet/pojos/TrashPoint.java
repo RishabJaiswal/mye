@@ -4,9 +4,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by Rishab on 26-05-2017.
  */
@@ -30,7 +27,8 @@ public class TrashPoint
         lat = latLng.latitude;
         longt = latLng.longitude;
         type = trashType;
-        dirty = 1L; clean =0L;
+        dirty = 1L;
+        clean = 0L;
     }
 
     public Long getTime()
@@ -43,10 +41,14 @@ public class TrashPoint
         return dirty;
     }
 
+    public void setDirty(long dirty) { this.dirty = dirty; }
+
     public Long getClean()
     {
         return clean;
     }
+
+    public void setClean(long clean) {this.clean = clean;}
 
     public Double getLat()
     {

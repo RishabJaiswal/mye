@@ -8,10 +8,12 @@ import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -54,6 +56,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.mindyourearth.planet.data.TrashPointsContract;
+import com.mindyourearth.planet.data.TrashPointsDbHelper;
 import com.mindyourearth.planet.pojos.TrashPoint;
 
 import java.util.ArrayList;
@@ -74,6 +78,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private Observer<Location> locationObserver;
     private boolean isObservingLocation, isTrashSelectDialogVisible;
     private long trashCount;
+    private MyViewModel myViewModel;
 
     View tapOnMap, locateMe;
 
@@ -85,6 +90,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         tapOnMap = findViewById(R.id.tap_on_map);
         locateMe = findViewById(R.id.locate_me);
         locateMe.setOnClickListener(this);
+        myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
         //checking if location is being observed on configuration changes too
         if (savedInstanceState != null)
@@ -132,8 +138,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         this.googleMap.setOnMarkerClickListener(this);
 
         //observing required live data
-        ViewModelProviders.of(this).get(MyViewModel.class)
-                .getTrashPointsSnapShotLD()
+        myViewModel.getTrashPointsSnapShotLD()
                 .observe(this, new Observer<List<Object>>()
                 {
                     @Override
@@ -157,7 +162,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                 marker.setTag(trashPoint);
                                 trashCount++;
                             }
-                            ((TextView)findViewById(R.id.trash_count)).setText(""+trashCount + " " +"trash points");
+                            ((TextView) findViewById(R.id.trash_count)).setText("" + trashCount + " " + "trash points");
                         } else
                         {
                             //todo: show error
@@ -214,48 +219,21 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
         //getting trashpoint pojo object from marker tag
         TrashPoint trashPoint = (TrashPoint) marker.getTag();
-        final View trashDetailView = getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
         try
         {
-            //dialog to show trashpoint details
-            AlertDialog alertDialog = new AlertDialog.Builder(this)
-                    .setTitle(R.string.dumping_land)
-                    .setView(trashDetailView)
-                    .setIcon(getTrashDrawable(trashPoint.getType()))
-                    .create();
-            alertDialog.show();
+            Bundle args = new Bundle();
+            args.putString("trashType", trashPoint.getType());
+            args.putString("trashKey", trashPoint.getKey());
+            myViewModel.getUserVoteLD().setValue(-2);
+
+            //showing dialog
+            TrashDetailDialog trashDetailDialog = new TrashDetailDialog();
+            trashDetailDialog.setArguments(args);
+            trashDetailDialog.show(getSupportFragmentManager(), "trashDetail");
         } catch (NullPointerException npe)
         {
             return true;
         }
-
-        //fetching trash point data from firebase
-        FirebaseDatabase.getInstance().getReference("poi/" + trashPoint.getKey())
-                .addListenerForSingleValueEvent(new ValueEventListener()
-                {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot)
-                    {
-                        //hiding progress bar
-                        trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
-                        trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
-
-                        //setting values
-                        ((TextView) trashDetailView.findViewById(R.id.votes_clean_count))
-                                .setText(dataSnapshot.child("clean").getValue().toString());
-                        ((TextView) trashDetailView.findViewById(R.id.votes_dirty_count))
-                                .setText(dataSnapshot.child("dirty").getValue().toString());
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError)
-                    {
-                        trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
-                        TextView youSayText = (TextView) trashDetailView.findViewById(R.id.you_say);
-                        youSayText.setVisibility(View.VISIBLE);
-                        youSayText.setText(R.string.failed_to_get_votes);
-                    }
-                });
         return true;
     }
 
@@ -308,7 +286,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == PERMISSIONS_REQUEST_CODE && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+        if (requestCode == PERMISSIONS_REQUEST_CODE && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED)
         {
             //start listening location updates
@@ -320,7 +298,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
     {
-        if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED &&
                 grantResults[1] == PackageManager.PERMISSION_GRANTED)
         {
             //start listening location updates
@@ -350,8 +328,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             return;
         }
         //this is where initial count of markers is set
-        else if(markerCount==-1 || !DateUtils.isToday(lastMarkerTimestamp))
-            preferences.edit().putInt(keyCount, 3).apply();
+        else if (markerCount == -1 || !DateUtils.isToday(lastMarkerTimestamp))
+            preferences.edit().putInt(keyCount, 1000).apply();
 
         //progress dialog
         RetainableProgressDialog progressDialog = new RetainableProgressDialog();
@@ -389,7 +367,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     }
 
     //getting drwable for trash types
-    private Drawable getTrashDrawable(String trashType)
+    public Drawable getTrashDrawable(String trashType)
     {
         Drawable drawable = null;
         switch (trashType)
@@ -442,8 +420,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         progressDialog.show(getSupportFragmentManager(), "progressDialog");
 
         //saving data
-        DatabaseReference trashPointRef = FirebaseDatabase.getInstance().getReference("poi").push();
-        trashPointRef.setValue(new TrashPoint(trashPointMarker.getPosition(), trashType), new DatabaseReference.CompletionListener()
+        final TrashPoint trashPoint = new TrashPoint(trashPointMarker.getPosition(), trashType);
+        final DatabaseReference trashPointRef = FirebaseDatabase.getInstance().getReference("poi").push();
+        final String trashKey = trashPointRef.getKey();
+        trashPoint.setKey(trashKey);
+        trashPointRef.setValue(trashPoint, new DatabaseReference.CompletionListener()
         {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference)
@@ -454,6 +435,9 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     Toast.makeText(TrashMapActivity.this, R.string.success_add_trash_point, Toast.LENGTH_LONG).show();
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(trashPointMarker.getPosition(), 16f));
 
+                    //saving to local db
+                    saveTrashToDB(trashKey);
+
                     //saving count and time stamp in shared preferences
                     SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
                     SharedPreferences.Editor editor = preferences.edit();
@@ -461,6 +445,9 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     editor.putInt(keyCount, preferences.getInt(keyCount, 0) - 1);
                     editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
                     editor.apply();
+
+                    //add tag to trashmarker
+                    trashPointMarker.setTag(trashPoint);
                 }
                 //failed to save trshPoint
                 else
@@ -472,18 +459,46 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         });
     }
 
+    //saving trashpoint to local database
+    private void saveTrashToDB(final String trashId)
+    {
+        Runnable runnable = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                TrashPointsDbHelper trashPointsDbHelper = new TrashPointsDbHelper(TrashMapActivity.this);
+                SQLiteDatabase db = trashPointsDbHelper.getWritableDatabase();
+
+                //values to put
+                ContentValues values = new ContentValues();
+                values.put(TrashPointsContract.TrashEntry._ID, trashId);
+                values.put(TrashPointsContract.TrashEntry.COLUMN_VOTE, 0);
+                values.put(TrashPointsContract.TrashEntry.COLUMN_USER_ADDED, 1);
+
+                //inserting row
+                db.insert(TrashPointsContract.TrashEntry.TABLE_NAME, null, values);
+                db.close();
+                trashPointsDbHelper.close();
+            }
+        };
+
+        Thread thread = new Thread(runnable);
+        thread.start();
+    }
+
     //stop observing location
     public void stopLocationObserving()
     {
         findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
         isObservingLocation = false;
         locationLiveData.removeObserver(locationObserver);
-        if(userMarker!=null)
+        if (userMarker != null)
         {
             userMarker.remove();
             userMarker = null;
         }
-        isTrashSelectDialogVisible=false;
+        isTrashSelectDialogVisible = false;
     }
 
     //setting location observer
@@ -515,8 +530,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                 .position(newLatLng)
                                 .title("My location"));
                         googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 16f));
-                    }
-                    else
+                    } else
                         userMarker.setPosition(newLatLng);
                 }
                 //google api connection error
@@ -528,8 +542,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             }
         };
         //start observing location
-        locationLiveData = ViewModelProviders.of(TrashMapActivity.this).get(MyViewModel.class)
-                .getUserLocation();
+        locationLiveData = myViewModel.getUserLocation();
         locationLiveData.observe(TrashMapActivity.this, locationObserver);
     }
 }
@@ -540,10 +553,12 @@ class MyViewModel extends AndroidViewModel
     //user's Location data
     private LocationLiveData locationLiveData;
     private MutableLiveData<List<Object>> trashPointsSnapShotOrErrorLD = new MutableLiveData<>();
+    private MutableLiveData<Integer> userVoteLD = new MutableLiveData<>();
 
     public MyViewModel(Application application)
     {
         super(application);
+        userVoteLD.setValue(-2);
     }
 
     //user location
@@ -578,6 +593,11 @@ class MyViewModel extends AndroidViewModel
             }
         });
         return trashPointsSnapShotOrErrorLD;
+    }
+
+    public MutableLiveData<Integer> getUserVoteLD()
+    {
+        return userVoteLD;
     }
 }
 
