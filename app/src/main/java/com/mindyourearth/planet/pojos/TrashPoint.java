@@ -74,4 +74,9 @@ public class TrashPoint
     {
         this.key = key;
     }
+
+    public LatLng getPostion()
+    {
+        return new LatLng(lat, longt);
+    }
 }

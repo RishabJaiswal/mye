@@ -79,8 +79,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private boolean isObservingLocation, isTrashSelectDialogVisible;
     private long trashCount;
     private MyViewModel myViewModel;
-
     View tapOnMap, locateMe;
+    int maxDistance = 3;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -224,6 +224,9 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             Bundle args = new Bundle();
             args.putString("trashType", trashPoint.getType());
             args.putString("trashKey", trashPoint.getKey());
+            if (getDistanceInKms(userMarker.getPosition(), trashPoint.getPostion()) < maxDistance)
+                args.putBoolean("canUserVote", true);
+            else args.putBoolean("canUserVote", false);
             myViewModel.getUserVoteLD().setValue(-2);
 
             //showing dialog
