@@ -39,6 +39,12 @@ import com.mindyourearth.planet.pojos.TrashPoint;
 
 public class TrashDetailDialog extends AppCompatDialogFragment implements View.OnClickListener
 {
+    //userVote values
+    //-2 : app didn't read user vote yet
+    //-1 : user didn't vote this trashpoint
+    //0 : user voted trash point dirty
+    //1 : user voted trash point clean
+
     AlertDialog alertDialog;
     String trashKey;
     ValueEventListener trashDetailListener;
@@ -73,12 +79,24 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState)
     {
-        if (trashKey == null) trashKey = getArguments().getString("trashKey");
+        final Bundle args = getArguments();
+        if (trashKey == null) trashKey = args.getString("trashKey");
         Activity activity = getActivity();
-        Drawable icon = ((TrashMapActivity) getActivity()).getTrashDrawable(getArguments().getString("trashType"));
+        Drawable icon = ((TrashMapActivity) getActivity()).getTrashDrawable(args.getString("trashType"));
         final View trashDetailView = activity.getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
         final View userVoteClean = trashDetailView.findViewById(R.id.user_vote_clean);
         final View userVoteDirty = trashDetailView.findViewById(R.id.user_vote_dirty);
+        if (!args.getBoolean("canUserVote"))
+        {
+            View[] views = {userVoteClean, userVoteDirty,
+            trashDetailView.findViewById(R.id.textView8),
+            trashDetailView.findViewById(R.id.space),
+            trashDetailView.findViewById(R.id.space2),
+            trashDetailView.findViewById(R.id.you_say),
+            trashDetailView.findViewById(R.id.textView9)};
+            for (View view: views)
+                view.setVisibility(View.GONE);
+        }
 
         //observing user's vote
         userVoteLD = ViewModelProviders.of(getActivity()).get(MyViewModel.class).getUserVoteLD();
@@ -91,12 +109,13 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                 {
                     userVoteClean.setAlpha(0.3f);
                     userVoteDirty.setAlpha(1f);
-                } else if (userVote == 1)
+                }
+                else if (userVote == 1)
                 {
                     userVoteClean.setAlpha(1f);
                     userVoteDirty.setAlpha(0.3f);
                 }
-                else if (userVote==-1)
+                else if (userVote == -1)
                 {
                     userVoteClean.setAlpha(0.3f);
                     userVoteDirty.setAlpha(0.3f);
@@ -117,7 +136,8 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
             {
                 //hiding progress bar
                 trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
-                trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
+                if (args.getBoolean("canUserVote"))
+                    trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
 
                 //setting values
                 ((TextView) trashDetailView.findViewById(R.id.votes_clean_count))
@@ -209,11 +229,14 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                 else if (isDirty)
                 {
                     trashPoint.setDirty(trashPoint.getDirty() + 1);
-                    trashPoint.setClean(trashPoint.getClean() - 1);
-                } else
+                    if(oldUserVote>-1) //user did vote then
+                        trashPoint.setClean(trashPoint.getClean() - 1);
+                }
+                else
                 {
-                    trashPoint.setDirty(trashPoint.getDirty() - 1);
                     trashPoint.setClean(trashPoint.getClean() + 1);
+                    if (oldUserVote > -1) //user did vote then
+                        trashPoint.setDirty(trashPoint.getDirty() - 1);
                 }
                 mutableData.setValue(trashPoint);
                 return Transaction.success(mutableData);
@@ -227,7 +250,7 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     userVoteLD.setValue(oldUserVote);
                     return;
                 }
-                //when operation complete successfully
+                //when operation completeS successfully
                 Runnable runnable = new Runnable()
                 {
                     @Override
@@ -246,7 +269,8 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                             db.update(TrashPointsContract.TrashEntry.TABLE_NAME, values,
                                     TrashPointsContract.TrashEntry._ID + " = ?",
                                     new String[]{trashKey});
-                        } else if (oldUserVote == -1)
+                        }
+                        else if (oldUserVote == -1)
                         {
                             values.put(TrashPointsContract.TrashEntry._ID, trashKey);
                             values.put(TrashPointsContract.TrashEntry.COLUMN_USER_ADDED, 0);

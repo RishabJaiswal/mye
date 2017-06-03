@@ -35,6 +35,7 @@ public class RetainableProgressDialog extends AppCompatDialogFragment
         }
         progressDialog = new ProgressDialog(getActivity());
         progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.setMessage(getString(getArguments().getInt("msg")));
         return progressDialog;
     }

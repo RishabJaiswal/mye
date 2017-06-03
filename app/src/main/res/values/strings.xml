@@ -52,4 +52,9 @@
     <string name="watch_to_earn_description">You can only add 3 trash points per day. To earn and add more trash points, watch a video. The earned trash markers are valid to be used today only.</string>
     <string name="watch_video">WATCH VIDEO</string>
     <string name="get_three_markers">Get 3 more trash markers</string>
+    <string name="save_trash_context_text">Save trash point</string>
+    <string name="mark_trash_context_text">Tap on a location on map</string>
+    <string name="permissions_request_title">Permissions needed</string>
+    <string name="msg_permissions_needed">Location permission are required to find your location. Please enable them.</string>
+    <string name="ok">OK</string>
 </resources>

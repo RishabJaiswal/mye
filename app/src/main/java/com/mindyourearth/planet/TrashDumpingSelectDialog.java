@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatDialogFragment;
-import android.text.format.DateUtils;
 import android.view.View;
 import android.widget.TextView;
 
@@ -24,7 +23,7 @@ public class TrashDumpingSelectDialog extends AppCompatDialogFragment implements
     @Override
     public void onCancel(DialogInterface dialog)
     {
-        ((TrashMapActivity)getActivity()).stopLocationObserving();
+        ((TrashMapActivity)getActivity()).stopSelectingTrashPoint();
         super.onCancel(dialog);
     }
 

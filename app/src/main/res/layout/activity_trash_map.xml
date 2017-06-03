@@ -1,4 +1,4 @@
-<RelativeLayout
+<android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:map="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -16,20 +16,37 @@
     <android.support.v7.widget.AppCompatTextView
         android:id="@+id/add_trash_point_button"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
+        android:layout_height="56dp"
         android:layout_marginBottom="24dp"
         android:background="@drawable/button_add_trash"
         android:clickable="true"
         android:drawablePadding="@dimen/eight"
         android:focusable="true"
-        android:fontFamily="@font/regular"
         android:gravity="center"
         android:padding="@dimen/vertical_margin"
         android:text="@string/btn_add_trash"
         android:textColor="@android:color/white"
-        android:textSize="@dimen/font_body_button"/>
+        android:textSize="@dimen/font_body_button"
+        map:layout_constraintBottom_toBottomOf="parent"
+        map:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"/>
+
+    <TextView
+        android:id="@+id/trash_count"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:background="@drawable/tap_on_map_back"
+        android:gravity="center"
+        android:text="..."
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/font_subheading"
+        map:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="8dp"
+        map:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="8dp"
+        map:layout_constraintTop_toTopOf="@+id/map"
+        android:layout_marginTop="16dp"/>
 
     <LinearLayout
         android:id="@+id/tap_on_map"
@@ -38,9 +55,15 @@
         android:gravity="center"
         android:layout_centerHorizontal="true"
         android:padding="16dp"
-        android:layout_marginTop="@dimen/vertical_margin"
         android:background="@drawable/tap_on_map_back"
-        android:visibility="gone">
+        android:visibility="gone"
+        map:layout_constraintEnd_toEndOf="parent"
+        tools:layout_editor_absoluteY="0dp"
+        android:layout_marginEnd="0dp"
+        map:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="0dp"
+        map:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="16dp">
 
         <android.support.v7.widget.AppCompatImageView
             android:layout_width="32dp"
@@ -50,35 +73,59 @@
             map:srcCompat="@drawable/marker_water_dumping"/>
 
         <TextView
+            android:id="@+id/mark_trash_context_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tap on a location on map"
+            android:text="@string/mark_trash_context_text"
             android:textColor="@android:color/white"/>
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/trash_count"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/tap_on_map_back"
-        android:gravity="center"
-        android:text="..."
-        android:textColor="@android:color/white"
-        android:textSize="@dimen/font_subheading"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@+id/add_trash_point_button"
-        android:layout_marginBottom="@dimen/vertical_margin"/>
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/locate_me"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         map:srcCompat="@drawable/my_location"
         map:fabSize="normal"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true"
         map:useCompatPadding="true"
-        android:visibility="gone"/>
+        android:visibility="visible"
+        map:backgroundTint="@android:color/white"
+        map:layout_constraintBottom_toTopOf="@+id/add_trash_point_button"
+        map:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="8dp"
+        android:layout_marginRight="8dp"/>
 
-</RelativeLayout>
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/save_trash_point"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        map:srcCompat="@drawable/check"
+        map:fabSize="normal"
+        android:translationY="80dp"
+        map:useCompatPadding="true"
+        android:visibility="visible"
+        map:backgroundTint="@color/colorPrimaryDark"
+        map:layout_constraintEnd_toStartOf="@+id/cancel_marking_trash_point"
+        map:layout_constraintHorizontal_bias="0.5"
+        map:layout_constraintStart_toStartOf="parent"
+        map:layout_constraintHorizontal_chainStyle="packed"
+        map:layout_constraintTop_toTopOf="@+id/cancel_marking_trash_point"
+        android:layout_marginTop="0dp"/>
+
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/cancel_marking_trash_point"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        map:srcCompat="@drawable/undo_marking"
+        map:fabSize="normal"
+        android:translationY="80dp"
+        map:useCompatPadding="true"
+        android:visibility="visible"
+        map:backgroundTint="@android:color/white"
+        map:layout_constraintStart_toEndOf="@+id/save_trash_point"
+        map:layout_constraintEnd_toEndOf="parent"
+        map:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="0dp"/>
+
+</android.support.constraint.ConstraintLayout>
