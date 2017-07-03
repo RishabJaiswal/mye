@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="4dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/selectableItemBackground">
+
+    <android.support.v7.widget.AppCompatImageView
+        android:id="@+id/trashIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        app:layout_constraintBottom_toBottomOf="@+id/check_votes"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/historty_title"
+        app:srcCompat="@drawable/marker_land_dumping"/>
+
+    <TextView
+        android:id="@+id/historty_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginStart="16dp"
+        android:text="TextView"
+        android:textAppearance="@style/TextAppearance.AppCompat.Subhead.Inverse"
+        android:textColor="@color/text_primary"
+        app:layout_constraintBottom_toTopOf="@+id/date_time"
+        app:layout_constraintStart_toEndOf="@+id/trashIcon"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed"
+        tools:text="You added a trash point"/>
+
+    <TextView
+        android:id="@+id/date_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginTop="4dp"
+        android:text="TextView"
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+        app:layout_constraintBottom_toTopOf="@+id/check_votes"
+        app:layout_constraintStart_toStartOf="@+id/historty_title"
+        app:layout_constraintTop_toBottomOf="@+id/historty_title"
+        tools:layout_editor_absoluteX="104dp"
+        tools:layout_editor_absoluteY="76dp"
+        tools:text="12 May 2017     11:45AM"/>
+
+    <TextView
+        android:id="@+id/check_votes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Check votes"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+        android:textColor="@color/text_primary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/date_time"
+        app:layout_constraintTop_toBottomOf="@+id/date_time"
+        tools:layout_editor_absoluteX="120dp"
+        tools:layout_editor_absoluteY="127dp"/>
+
+</android.support.constraint.ConstraintLayout>

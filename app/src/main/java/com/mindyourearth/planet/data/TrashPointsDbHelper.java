@@ -16,6 +16,8 @@ public class TrashPointsDbHelper extends SQLiteOpenHelper
     private static final String SQL_CREATE_ENTRIES =
             "CREATE TABLE " + TrashPointsContract.TrashEntry.TABLE_NAME + " (" +
                     TrashPointsContract.TrashEntry._ID + " TEXT PRIMARY KEY," +
+                    TrashPointsContract.TrashEntry.COLUMN_TYPE + " TEXT," +
+                    TrashPointsContract.TrashEntry.COLUMN_TIME + " INTEGER," +
                     TrashPointsContract.TrashEntry.COLUMN_VOTE + " INTEGER," +
                     TrashPointsContract.TrashEntry.COLUMN_USER_ADDED + " INTEGER)";
 

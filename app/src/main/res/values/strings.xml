@@ -1,17 +1,17 @@
 <resources>
     <string name="app_name">Mind your Earth</string>
-    <string name="title_activity_trash_map">Trash points</string>
+    <string name="title_activity_trash_map">Mind your Earth</string>
 
     <!--agreement dialog-->
     <string name="title_dialog_agreement">Agreement</string>
-    <string name="message_dialog_agreement">The trash point that you will add must be valid.
-        The location that you will mark on the map is polluted with some kind of waste.
-    Being a habitant of Earth, you will mark such trash points very responsibly.</string>
+    <string name="message_dialog_agreement">\n1. The trash point that you will add must be valid.
+        \n\n2. The location that you will mark on the map must indicate a point of improvement.
+        \n\n3. Being a habitant of Earth, you will mark such trash points very responsibly.</string>
     <string name="i_agree">i agree</string>
     <string name="btn_add_trash">ADD A TRASH POINT</string>
 
     <!--select type of dumping dialog-->
-    <string name="title_dialog_add_trash_point">Add a trash point</string>
+    <string name="title_dialog_add_trash_point">Select trash type</string>
     <string name="dumping_land">Land dumping</string>
     <string name="dumping_water">Water dumping</string>
     <string name="dumping_air">Air dumping</string>
@@ -20,12 +20,12 @@
     <string name="trash_markers_renew">your trash markers will renew each day</string>
 
     <!--fetching location progress dialog -->
-    <string name="fetching_location">getting your location…</string>
-    <string name="location_error">Unable to get location</string>
+    <string name="fetching_location">Getting your location…</string>
+    <string name="location_error">Unable to get your location</string>
 
     <!--invalid location dialog-->
     <string name="invalid_location">Location not valid</string>
-    <string name="invalid_location_msg">You can only add trash point 2 kms from your current location</string>
+    <string name="invalid_location_msg">You can only add trash points 2 kms away from your current location</string>
 
     <!--saving trash point progress dialog-->
     <string name="saving_data">Saving trash point</string>
@@ -39,22 +39,68 @@
     <string name="people_say">people say</string>
     <string name="its_dirty">not clean</string>
     <string name="you_say">You say</string>
+
+    <!--share trash point-->
     <string name="share_trash_point">Share trash point</string>
-    <string name="share_description">share image/link of the trash</string>
+    <string name="share_description">image/link of the trash</string>
     <string name="failed_to_get_votes">Error</string>
+    <string name="building_link">Building link</string>
+    <string name="try_again">Please try again</string>
+    <string name="share_link">Link</string>
+    <string name="share_image">Image</string>
+    <string name="choose_image">Choose photo</string>
+    <string name="share_via">Share via</string>
 
     <!--default preferences-->
     <string name="pref_count">count</string>
     <string name="pref_last_marker_timestamp">lastMarkerTimestamp</string>
 
     <!--rewarded video dialog-->
-    <string name="watch_viedo_to_earn">Watch video to earn 3 more trash marker</string>
+    <string name="watch_viedo_to_earn">Watch video to earn 3 more trash markers</string>
     <string name="watch_to_earn_description">You can only add 3 trash points per day. To earn and add more trash points, watch a video. The earned trash markers are valid to be used today only.</string>
     <string name="watch_video">WATCH VIDEO</string>
     <string name="get_three_markers">Get 3 more trash markers</string>
     <string name="save_trash_context_text">Save trash point</string>
-    <string name="mark_trash_context_text">Tap on a location on map</string>
+    <string name="mark_trash_context_text">Tap on map to add</string>
+
+    <!--permissions request dialog-->
     <string name="permissions_request_title">Permissions needed</string>
     <string name="msg_permissions_needed">Location permission are required to find your location. Please enable them.</string>
     <string name="ok">OK</string>
+    <string name="please_wait">Please wait</string>
+    <string name="since_last_visit">Since your last visit</string>
+
+    <!--adMob ids-->
+    <string name="ad_app_id" translatable="false">aa</string>
+    <string name="ad_rewarded_adunit_id" translatable="false">aa</string>
+    <string name="ad_native_adunit_id" translatable="false">aa</string>
+    <string name="native_ad_size" translatable="false">280x100</string>
+    <string name="failed_to_load_ad">Failed to load video</string>
+    <string name="loading_video">Loading video</string>
+
+    <string name="enable">ENABLE</string>
+    <string name="stats_now">Now :</string>
+    <string name="pref_trash_count">trashPointsCount</string>
+    <string name="stats_then">Then :</string>
+    <string name="trash_link_to_clipboard">Trash link copied to clipboard</string>
+    <string name="select_one_to_vote">Select one to vote</string>
+    <string name="pref_first_vote_done">firstVoteDone</string>
+    <string name="your_trash_points">Trash points &amp; votes</string>
+    <string name="added_trash_point">You added trash point</string>
+    <string name="voted_trash_point">You voted trash point</string>
+    <string name="your_vote_dirty">Your voted it dirty</string>
+    <string name="your_vote_clean">Your voted it clean</string>
+    <string name="intro_msg">The universal idea is to keep Earth happy and clean but not each one of us is aware of her to full potential.</string>
+    <string name="intro_msg_title">Let\'s start by small scale</string>
+    <string name="intro_third_card">Awareness is the first step to any solution. Take the first step and play your part.</string>
+    <string name="begin">BEGIN</string>
+    <string name="trash_points">trash points</string>
+    <string name="added_on">added on</string>
+    <string name="on_maps">Show on Maps</string>
+    <string name="trash_point_removed">Trash point has been removed</string>
+    <string name="remove_trash_point">Remove trash point</string>
+    <string name="cancel_removal_btn_txt">Cancel</string>
+    <string name="remove_trash_btn_txt">Remove</string>
+    <string name="ask_trash_removal">Remove trash point?</string>
 </resources>
+

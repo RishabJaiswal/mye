@@ -41,14 +41,26 @@ public class TrashPoint
         return dirty;
     }
 
-    public void setDirty(long dirty) { this.dirty = dirty; }
+    public void setDirty(long dirty)
+    {
+        if (dirty < 0)
+            this.dirty = 0L;
+        else
+            this.dirty = dirty;
+    }
 
     public Long getClean()
     {
         return clean;
     }
 
-    public void setClean(long clean) {this.clean = clean;}
+    public void setClean(long clean)
+    {
+        if (clean < 0)
+            this.clean = 0L;
+        else
+            this.clean = clean;
+    }
 
     public Double getLat()
     {
@@ -60,21 +72,30 @@ public class TrashPoint
         return longt;
     }
 
+    public void setType(String type)
+    {
+        this.type = type;
+    }
+
     public String getType()
     {
         return type;
     }
 
+
+    @Exclude
     public String getKey()
     {
         return key;
     }
 
+    @Exclude
     public void setKey(String key)
     {
         this.key = key;
     }
 
+    @Exclude
     public LatLng getPostion()
     {
         return new LatLng(lat, longt);

@@ -17,5 +17,7 @@ public final class TrashPointsContract
         public static final String TABLE_NAME = "trashPoints";
         public static final String COLUMN_VOTE = "vote";
         public static final String COLUMN_USER_ADDED = "userAdded";
+        public static final String COLUMN_TIME = "time";
+        public static final String COLUMN_TYPE = "type";
     }
 }

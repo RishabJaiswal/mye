@@ -13,7 +13,21 @@
         android:layout_height="match_parent"
         tools:context="com.mindyourearth.planet.TrashMapActivity"/>
 
-    <android.support.v7.widget.AppCompatTextView
+    <!--show history button-->
+    <android.support.v7.widget.AppCompatImageView
+        android:id="@+id/trash_history"
+        android:elevation="2dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        map:srcCompat="@drawable/ic_history"
+        android:padding="8dp"
+        android:background="@drawable/semi_circle"
+        map:layout_constraintEnd_toEndOf="parent"
+        map:layout_constraintTop_toTopOf="@+id/stats"
+        map:layout_constraintBottom_toBottomOf="@+id/stats"/>
+
+    <!--add trash button-->
+    <android.support.v7.widget.AppCompatButton
         android:id="@+id/add_trash_point_button"
         android:layout_width="wrap_content"
         android:layout_height="56dp"
@@ -32,47 +46,34 @@
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"/>
 
-    <TextView
-        android:id="@+id/trash_count"
-        android:layout_width="wrap_content"
-        android:layout_height="56dp"
-        android:background="@drawable/tap_on_map_back"
-        android:gravity="center"
-        android:text="..."
-        android:textColor="@android:color/white"
-        android:textSize="@dimen/font_subheading"
-        map:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginEnd="8dp"
-        map:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="8dp"
-        map:layout_constraintTop_toTopOf="@+id/map"
-        android:layout_marginTop="16dp"/>
-
     <LinearLayout
         android:id="@+id/tap_on_map"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center"
         android:layout_centerHorizontal="true"
-        android:padding="16dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="16dp"
+        android:animateLayoutChanges="true"
         android:background="@drawable/tap_on_map_back"
+        android:gravity="center"
+        android:padding="16dp"
         android:visibility="gone"
         map:layout_constraintEnd_toEndOf="parent"
-        tools:layout_editor_absoluteY="0dp"
-        android:layout_marginEnd="0dp"
         map:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="0dp"
         map:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="16dp">
+        tools:layout_editor_absoluteY="0dp">
 
         <android.support.v7.widget.AppCompatImageView
+            android:id="@+id/tap_save_img"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginEnd="@dimen/vertical_margin"
-            android:layout_marginRight="@dimen/vertical_margin"
-            map:srcCompat="@drawable/marker_water_dumping"/>
+            android:layout_marginEnd="@dimen/eight"
+            android:layout_marginRight="@dimen/eight"
+            map:srcCompat="@drawable/ic_tap"/>
 
-        <TextView
+        <android.support.v7.widget.AppCompatTextView
+            fontPath="fonts/medium.otf"
             android:id="@+id/mark_trash_context_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -81,6 +82,7 @@
 
     </LinearLayout>
 
+    <!--locate me FAB-->
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/locate_me"
         android:layout_width="wrap_content"
@@ -103,15 +105,10 @@
         map:fabSize="normal"
         android:translationY="80dp"
         map:useCompatPadding="true"
-        android:visibility="visible"
         map:backgroundTint="@color/colorPrimaryDark"
-        map:layout_constraintEnd_toStartOf="@+id/cancel_marking_trash_point"
-        map:layout_constraintHorizontal_bias="0.5"
-        map:layout_constraintStart_toStartOf="parent"
-        map:layout_constraintHorizontal_chainStyle="packed"
         map:layout_constraintTop_toTopOf="@+id/cancel_marking_trash_point"
-        android:layout_marginTop="0dp"/>
-
+        map:layout_constraintStart_toEndOf="@+id/cancel_marking_trash_point"
+        map:layout_constraintEnd_toEndOf="parent"/>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/cancel_marking_trash_point"
@@ -121,11 +118,72 @@
         map:fabSize="normal"
         android:translationY="80dp"
         map:useCompatPadding="true"
-        android:visibility="visible"
         map:backgroundTint="@android:color/white"
-        map:layout_constraintStart_toEndOf="@+id/save_trash_point"
+        map:layout_constraintStart_toStartOf="parent"
+        map:layout_constraintEnd_toStartOf="@+id/save_trash_point"
+        map:layout_constraintHorizontal_chainStyle="packed"
+        map:layout_constraintBottom_toBottomOf="@+id/map"/>
+
+    <!--stats-->
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/stats"
+        android:elevation="2dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/stats_selector"
+        android:paddingBottom="@dimen/eight"
+        android:paddingEnd="24dp"
+        android:paddingLeft="8dp"
+        android:paddingRight="24dp"
+        android:paddingStart="8dp"
+        android:paddingTop="@dimen/eight"
+        android:onClick="onClick"
+        android:visibility="visible"
         map:layout_constraintEnd_toEndOf="parent"
-        map:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginBottom="0dp"/>
+        map:layout_constraintStart_toStartOf="parent"
+        map:layout_constraintTop_toTopOf="@+id/map">
+
+        <android.support.v7.widget.AppCompatTextView
+            android:id="@+id/stat_then"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="2dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginStart="8dp"
+            android:text="Then : --"
+            android:textColor="@android:color/white"
+            fontPath="fonts/medium.otf"
+            map:layout_constraintBottom_toTopOf="@+id/stat_now"
+            map:layout_constraintEnd_toEndOf="parent"
+            map:layout_constraintStart_toEndOf="@+id/imageView5"
+            map:layout_constraintTop_toTopOf="parent"/>
+
+        <android.support.v7.widget.AppCompatTextView
+            android:id="@+id/stat_now"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="16dp"
+            android:layout_marginStart="8dp"
+            android:text="Now : --"
+            android:textColor="@android:color/white"
+            fontPath="fonts/medium.otf"
+            map:layout_constraintBottom_toBottomOf="parent"
+            map:layout_constraintEnd_toEndOf="parent"
+            map:layout_constraintStart_toEndOf="@+id/imageView5"
+            map:layout_constraintTop_toBottomOf="@+id/stat_then"/>
+
+        <android.support.v7.widget.AppCompatImageView
+            android:id="@+id/imageView5"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/circle_back"
+            android:padding="8dp"
+            map:layout_constraintBottom_toBottomOf="parent"
+            map:layout_constraintStart_toStartOf="parent"
+            map:layout_constraintTop_toTopOf="parent"
+            map:srcCompat="@drawable/ic_stats"/>
+
+    </android.support.constraint.ConstraintLayout>
 
 </android.support.constraint.ConstraintLayout>

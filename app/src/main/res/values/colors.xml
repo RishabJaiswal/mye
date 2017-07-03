@@ -6,6 +6,7 @@
 
     <color name="vote_backround">#99ff5252</color>
     <color name="blue">#2196F3</color>
+    <color name="blue_light">#54000000</color>
 
 
     <!--text colors-->

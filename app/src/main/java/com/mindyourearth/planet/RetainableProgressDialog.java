@@ -14,12 +14,13 @@ import android.support.v7.app.AppCompatDialogFragment;
 
 public class RetainableProgressDialog extends AppCompatDialogFragment
 {
+    //todo: set ativity's progress dialog from fragment
     ProgressDialog progressDialog;
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState)
+    public void onCreate(@Nullable Bundle savedInstanceState)
     {
-        super.onActivityCreated(savedInstanceState);
+        super.onCreate(savedInstanceState);
         Activity activity = getActivity();
         if (activity instanceof ProgressableActivity)
             ((ProgressableActivity) activity).setProgressDialog(this);

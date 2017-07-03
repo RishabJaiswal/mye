@@ -11,4 +11,8 @@
     <dimen name="font_subheading">16sp</dimen>
     <dimen name="font_title">20sp</dimen>
     <dimen name="font_heading">24sp</dimen>
+
+    <!--share trash point-->
+    <dimen name="share_icon_size">24dp</dimen>
+    <dimen name="share_text_size">@dimen/font_body_button</dimen>
 </resources>

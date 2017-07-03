@@ -1,5 +1,6 @@
 package com.mindyourearth.planet;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -30,10 +31,11 @@ public class AgreementDialog extends AppCompatDialogFragment
     {
         //controlling visibility from fragment
         //to main its state in device rotation
-        getActivity().findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
+        Activity activity = getActivity();
+        activity.findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
         if(alertDialog!=null)
             return alertDialog;
-        alertDialog = new AlertDialog.Builder(getActivity())
+        alertDialog = new AlertDialog.Builder(activity)
                 .setTitle(R.string.title_dialog_agreement)
                 .setMessage(R.string.message_dialog_agreement)
                 .setPositiveButton(R.string.i_agree, new DialogInterface.OnClickListener()
