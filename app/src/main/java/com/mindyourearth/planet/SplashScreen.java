@@ -27,13 +27,18 @@ public class SplashScreen extends AppCompatActivity
     {
         super.onStart();
         animLogo.start();
-
+        final Intent intent;
+        if(getSharedPreferences(getString(R.string.shared_pref_user), MODE_PRIVATE)
+                .getBoolean(getString(R.string.pref_new_user), true))
+            intent = new Intent(SplashScreen.this, IntroActivity.class);
+        else
+            intent = new Intent(SplashScreen.this, TrashMapActivity.class);
         new Handler().postDelayed(new Runnable()
         {
             @Override
             public void run()
             {
-                startActivity(new Intent(SplashScreen.this, IntroActivity.class));
+                startActivity(intent);
                 finish();
             }
         }, 2500);

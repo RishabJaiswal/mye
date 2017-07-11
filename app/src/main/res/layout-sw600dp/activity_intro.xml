@@ -60,7 +60,7 @@
                 fontPath="fonts/medium.otf"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Just tap on the map to add trash points near you"
+                android:text="@string/intro_first_card"
                 android:textAppearance="@style/TextAppearance.AppCompat.Body2"
                 android:textColor="@color/blue"
                 android:textSize="@dimen/font_title"

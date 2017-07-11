@@ -91,5 +91,8 @@ public class IntroActivity extends AppCompatActivity
     public void begin(View v)
     {
         startActivity(new Intent(this, TrashMapActivity.class));
+        getSharedPreferences(getString(R.string.shared_pref_user), MODE_PRIVATE).edit()
+                .putBoolean(getString(R.string.pref_new_user), false).apply();
+        finish();
     }
 }

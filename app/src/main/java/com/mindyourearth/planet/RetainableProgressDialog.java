@@ -16,6 +16,7 @@ public class RetainableProgressDialog extends AppCompatDialogFragment
 {
     //todo: set ativity's progress dialog from fragment
     ProgressDialog progressDialog;
+    private String tag;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState)
@@ -26,6 +27,15 @@ public class RetainableProgressDialog extends AppCompatDialogFragment
             ((ProgressableActivity) activity).setProgressDialog(this);
     }
 
+    void setCustomTag(String tag)
+    {
+        this.tag = tag;
+    }
+
+    String getCustomTag()
+    {
+        return tag;
+    }
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState)

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="@dimen/vertical_margin"
+    android:gravity="center">
+
+    <android.support.v7.widget.AppCompatImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        app:srcCompat="@drawable/ic_no_internet"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="@dimen/font_subheading"
+        android:text="@string/no_network_msg"
+        android:textColor="@color/text_secondary_icons"
+        android:layout_marginTop="@dimen/vertical_margin"/>
+
+</LinearLayout>

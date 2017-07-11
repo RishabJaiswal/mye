@@ -16,25 +16,4 @@
             android:valueTo="0dp"/>
     </set>
 
-<!--    <objectAnimator
-        android:duration="2000"
-        android:propertyName="translationX"
-        android:valueFrom="0dp"
-        android:valueTo="0dp"/>
-
-    <set>
-
-        <objectAnimator
-            android:duration="2000"
-            android:propertyName="translationX"
-            android:valueFrom="0dp"
-            android:valueTo="-480dp"/>
-
-        <objectAnimator
-            android:duration="2000"
-            android:propertyName="rotation"
-            android:valueFrom="0"
-            android:valueTo="-90"/>
-    </set>-->
-
 </set>

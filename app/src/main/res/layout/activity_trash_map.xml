@@ -8,10 +8,42 @@
 
     <fragment
         android:id="@+id/map"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
+        class="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context="com.mindyourearth.planet.TrashMapActivity"/>
+
+    <!--tutorial-->
+    <RelativeLayout
+        android:id="@+id/tutorial"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/colorPrimary"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tutorial"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/font_title"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="@dimen/vertical_margin"
+            android:layout_marginStart="@dimen/vertical_margin"/>
+
+        <Button
+        android:id="@+id/skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:text="@string/skip"
+        android:textColor="@android:color/white"
+        android:background="?android:attr/selectableItemBackground"
+        android:onClick="onClick"/>
+
+    </RelativeLayout>
 
     <!--show history button-->
     <android.support.v7.widget.AppCompatImageView
@@ -97,6 +129,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"/>
 
+    <!--save trash point FAB-->
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/save_trash_point"
         android:layout_width="wrap_content"
@@ -110,6 +143,7 @@
         map:layout_constraintStart_toEndOf="@+id/cancel_marking_trash_point"
         map:layout_constraintEnd_toEndOf="parent"/>
 
+    <!--cancel marking trash point FAB-->
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/cancel_marking_trash_point"
         android:layout_width="wrap_content"
@@ -151,7 +185,7 @@
             android:layout_marginBottom="2dp"
             android:layout_marginLeft="16dp"
             android:layout_marginStart="8dp"
-            android:text="Then : --"
+            android:text="@string/stats_then_nill"
             android:textColor="@android:color/white"
             fontPath="fonts/medium.otf"
             map:layout_constraintBottom_toTopOf="@+id/stat_now"
@@ -165,7 +199,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="16dp"
             android:layout_marginStart="8dp"
-            android:text="Now : --"
+            android:text="@string/stats_now_nill"
             android:textColor="@android:color/white"
             fontPath="fonts/medium.otf"
             map:layout_constraintBottom_toBottomOf="parent"

@@ -146,7 +146,6 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
         View menuIcon = trashDetailView.findViewById(R.id.menu_icon);
 
         //on click listners
-        trashDetailView.findViewById(R.id.share_trash_point).setOnClickListener(this);
         trashDetailView.findViewById(R.id.share_image).setOnClickListener(this);
         trashDetailView.findViewById(R.id.share_link).setOnClickListener(this);
         trashDetailView.findViewById(R.id.cancel_removal_btn).setOnClickListener(this);
@@ -194,6 +193,7 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     userVoteCleanTxt.setOnClickListener(TrashDetailDialog.this);
                     userVoteDirty.setOnClickListener(TrashDetailDialog.this);
                     userVoteDirtyTxt.setOnClickListener(TrashDetailDialog.this);
+                    trashDetailView.findViewById(R.id.share_trash_point).setOnClickListener(TrashDetailDialog.this);
                 }
             }
         });
@@ -215,7 +215,7 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     long totalVotes = trashPoint.getClean() + trashPoint.getDirty();
                     int cleanPercent = (int) ((trashPoint.getClean()*100) / totalVotes);
                     if (hasUserAddedThis ||
-                            canUserVote && totalVotes >= trashMapActivity.minVotesToRemove && cleanPercent >= 70)
+                            (canUserVote && totalVotes >= trashMapActivity.minVotesToRemove && cleanPercent >= 70))
                         popupMenu.getMenu().findItem(R.id.remove_trash_point).setEnabled(true);
                     else
                         popupMenu.getMenu().findItem(R.id.remove_trash_point).setEnabled(false);
@@ -247,11 +247,8 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     {
                         //get vote initally
                         trashDetailView.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
-                        if (hasFirstVoteDone)
-                        {
-                            getInitialUserVote();
-                        }
-                        else
+                        getInitialUserVote();
+                        if(!hasFirstVoteDone)
                         {
                             AppCompatTextView tutorial_vote = (AppCompatTextView) trashDetailView.findViewById(R.id.vote_tutorial_text);
                             tutorial_vote.setCompoundDrawablesWithIntrinsicBounds(
@@ -282,6 +279,10 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     trashDetailView.findViewById(R.id.cancel_removal_btn).setVisibility(View.GONE);
                     trashDetailView.findViewById(R.id.approve_removal_btn).setVisibility(View.GONE);
                     animatedLogo.start();
+                }
+                catch (ArithmeticException ae)
+                {
+                    getDialog().cancel();
                 }
             }
 
@@ -418,6 +419,7 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
     }
 
     //method to get user vote when no dialog is first opened
+    //get if user has added the point or not
     public void getInitialUserVote()
     {
         //checking if user voted on the trashPoint

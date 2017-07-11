@@ -3,11 +3,13 @@
     android:ordering="sequentially">
     <objectAnimator
         android:duration="400"
+        android:valueFrom="0"
         android:valueTo="0"
         android:propertyName="scaleX"
         android:valueType="floatType"/>
     <objectAnimator
         android:duration="400"
+        android:valueFrom="0"
         android:valueTo="0"
         android:propertyName="scaleY"
         android:valueType="floatType"/>
@@ -15,11 +17,13 @@
     <set>
         <objectAnimator
             android:duration="1000"
+            android:valueFrom="0"
             android:valueTo="1"
             android:propertyName="scaleX"
             android:valueType="floatType"/>
         <objectAnimator
             android:duration="1000"
+            android:valueFrom="0"
             android:valueTo="1"
             android:propertyName="scaleY"
             android:valueType="floatType"/>

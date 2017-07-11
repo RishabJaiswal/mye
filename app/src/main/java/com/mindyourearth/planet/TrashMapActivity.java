@@ -1,8 +1,6 @@
 package com.mindyourearth.planet;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
-import android.arch.lifecycle.AndroidViewModel;
 import android.arch.lifecycle.LifecycleActivity;
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
@@ -26,6 +24,8 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -91,7 +91,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
@@ -114,7 +113,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     float[] accelerometerReadings = new float[3];
     float[] geomagnetometerReadings = new float[3];
     private String tagForMarkerBitmap, trashKey, trashType;    // this trashkey represts the id of trashpoint
-                                                    // whose details are currently open in dialog
+    // whose details are currently open in dialog
     private boolean isSelectingTrashPoint, isTrashSelectDialogVisible;
 
     private MyViewModel myViewModel;
@@ -133,6 +132,10 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private float[] rotationMatrix = new float[9];
     private float[] orientationAngles = new float[3];
     private float alpha = 0.97f;
+    private AppCompatButton addTrashButton;
+    private SupportMapFragment mapFragment;
+    private Marker dummyMarker;
+    private Uri sharedImageUri;
 
     @Override
     protected void attachBaseContext(Context newBase)
@@ -173,7 +176,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
 
             if (isSelectingTrashPoint)
             {
-                findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
+                addTrashButton.setVisibility(View.GONE);
                 stats.setVisibility(View.GONE);
                 trashHistoryBtn.setVisibility(View.GONE);
                 if (tagForMarkerBitmap != null)
@@ -185,12 +188,12 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        loadMap();
 
         //setting add trash button
-        AppCompatButton addTrashButton = (AppCompatButton) findViewById(R.id.add_trash_point_button);
+        addTrashButton = (AppCompatButton) findViewById(R.id.add_trash_point_button);
         Drawable leftDrawable = VectorDrawableCompat.create(getResources(), R.drawable.marker_land_dumping, getTheme());
         addTrashButton.setCompoundDrawablesWithIntrinsicBounds(leftDrawable, null, null, null);
         addTrashButton.setOnClickListener(this);
@@ -206,7 +209,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             @Override
             public void onDataChange(DataSnapshot dataSnapshot)
             {
-                minVotesToRemove = ((Long)dataSnapshot.getValue()).intValue();
+                minVotesToRemove = ((Long) dataSnapshot.getValue()).intValue();
             }
 
             @Override
@@ -219,13 +222,38 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
     }
 
+    private void loadMap()
+    {
+        //checking network connectivity
+        if (hasInternetConnection())
+        {
+            createProgressDialog(R.string.loading_map);
+            mapFragment.getMapAsync(this);
+        }
+        else
+        {
+            new AlertDialog.Builder(this)
+                    .setView(R.layout.dialog_no_internet)
+                    .setPositiveButton(R.string.retry, new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            loadMap();
+                        }
+                    })
+                    .create()
+                    .show();
+        }
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState)
     {
-        super.onSaveInstanceState(outState);
         outState.putBoolean("isSelectingTrashPoint", isSelectingTrashPoint);
         outState.putString("tagForMarker", tagForMarkerBitmap);
         outState.putBoolean("isTrashSelecting", isTrashSelectDialogVisible);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -242,6 +270,13 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         rewardedVideoAd.resume(this);
         super.onResume();
 
+        //when sharing trash Image
+        if (sharedImageUri != null)
+        {
+            createProgressDialog(R.string.building_link);
+            new DynamicLinkTask(myViewModel.getShareDynamicLinkLD()).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, trashKey, trashType);
+        }
+
         //registering sensorManager
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
                 SensorManager.SENSOR_DELAY_UI);
@@ -253,7 +288,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     protected void onStart()
     {
         super.onStart();
-        if(userMarker!=null)
+        if (userMarker != null)
             getSharedDynamicLink();
     }
 
@@ -278,8 +313,21 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     public void onMapReady(final GoogleMap googleMap)
     {
         this.googleMap = googleMap;
+        //checking if user needs to get tutorial done
+        if (!getPreferences(MODE_PRIVATE).getBoolean(getString(R.string.pref_tutorial_done), false))
+        {
+            startTutorial();
+            setProgressDialog(null);
+            return;
+        }
+
         this.googleMap.setOnMarkerClickListener(this);
         final MutableLiveData<Long> trashCountLD = myViewModel.getTrashCountLD();
+        //showing progress dialog
+        if (currProgressDialog != null)
+            currProgressDialog.progressDialog.setMessage(getString(R.string.getting_trash_points));
+        else
+            createProgressDialog(R.string.getting_trash_points);
 
         //observing changes in trash point
         myViewModel.getTrashPointsSnapShotLD()
@@ -289,10 +337,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     public void onChanged(@Nullable List<Object> trashPointsOrError)
                     {
                         long trashPointsCount = 0L;
-                        if (trashPointsOrError.size() == 0)
+                        if (trashPointsOrError == null || trashPointsOrError.size() == 0)
                         {
                             //todo: check for null trashPointsOrError too
-                            //todo: show progress dialog
+                            setProgressDialog(null);
+                            Toast.makeText(TrashMapActivity.this, R.string.fail_to_get_trashpoints, Toast.LENGTH_SHORT).show();
                         }
                         else if (trashPointsOrError.get(0) != null)
                         {
@@ -308,17 +357,19 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                 marker.setTag(trashPoint);
                                 trashPointsCount++;
                             }
+                            setProgressDialog(null);
                         }
                         else
                         {
-                            //todo: show error
+                            setProgressDialog(null);
+                            Toast.makeText(TrashMapActivity.this, R.string.fail_to_get_trashpoints, Toast.LENGTH_SHORT).show();
                         }
 
                         if (trashPointsCount != 0)
                         {
                             trashCountLD.setValue(trashPointsCount);
+                            setProgressDialog(null);
                         }
-
                     }
                 });
 
@@ -349,16 +400,6 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         //a trash type point to add
         if (tagForMarkerBitmap != null)
             this.googleMap.setOnMapClickListener(this);
-    }
-
-    private boolean hasRequiredPermissions()
-    {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
-            return true;
-        return ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override
@@ -400,6 +441,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     @Override
     public boolean onMarkerClick(Marker marker)
     {
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(), 18f));
         return showTrashDetails(marker, null);
     }
 
@@ -448,7 +490,14 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         {
             case R.id.add_trash_point_button:
             {
-                if (hasRequiredPermissions())
+                if (!hasInternetConnection())
+                {
+                    new AlertDialog.Builder(this)
+                            .setView(R.layout.dialog_no_internet)
+                            .create()
+                            .show();
+                }
+                else if (hasRequiredPermissions())
                 {
                     AgreementDialog agreementDialog = new AgreementDialog();
                     agreementDialog.show(getSupportFragmentManager(), "agreement");
@@ -459,8 +508,38 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             }
             case R.id.locate_me:
             {
-                if (userMarker != null)
+                if (!hasInternetConnection())
+                {
+                    new AlertDialog.Builder(this)
+                            .setView(R.layout.dialog_no_internet)
+                            .create()
+                            .show();
+                }
+                else if (userMarker != null)
                     googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userMarker.getPosition(), 16f));
+                else if (!hasRequiredPermissions())
+                {
+                    askRequiredPermissions();
+                }
+                else if (locationObserver != null)
+                {
+                    Status status = locationLD.getResolutionLD().getValue();
+                    if (status != null)
+                    {
+                        try
+                        {
+                            status.startResolutionForResult(TrashMapActivity.this, REQUEST_RESULTION);
+                        } catch (IntentSender.SendIntentException e)
+                        {
+                            Toast.makeText(TrashMapActivity.this, R.string.location_error, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                    else
+                        Toast.makeText(TrashMapActivity.this, R.string.location_error, Toast.LENGTH_LONG).show();
+
+                }
+                else
+                    startObservingLocation();
                 break;
             }
             case R.id.save_trash_point:
@@ -484,6 +563,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             case R.id.stats:
             {
                 showStatsDialog();
+                break;
+            }
+            case R.id.skip:
+            {
+                stopTutorial();
                 break;
             }
         }
@@ -516,42 +600,10 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             case REQUEST_SELECT_IMAGE:
             {
                 //building link and sharing image
-                if (resultCode != RESULT_OK)
-                    return;
-                final MutableLiveData<String> dynamicLinkLD = myViewModel.getShareDynamicLinkLD();
-                dynamicLinkLD.observe(this, new Observer<String>()
+                if (resultCode == RESULT_OK)
                 {
-                    @Override
-                    public void onChanged(@Nullable String dl)
-                    {
-                        if (dl != null)
-                        {
-                            Intent intent = ShareCompat.IntentBuilder.from(TrashMapActivity.this)
-                                    .setType("image/*")
-                                    .setStream(data.getData())
-                                    .setText(dl)
-                                    .createChooserIntent();
-                            startActivity(Intent.createChooser(intent, getString(R.string.share_via)));
-
-                            //copying text to clipboard
-                            ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                            ClipData clipData = ClipData.newPlainText("trash url", dl);
-                            clipboardManager.setPrimaryClip(clipData);
-                            Toast.makeText(TrashMapActivity.this, R.string.trash_link_to_clipboard, Toast.LENGTH_LONG).show();
-
-                            currProgressDialog.dismiss();
-                            setProgressDialog(null);
-                            dynamicLinkLD.removeObservers(TrashMapActivity.this);
-                            dynamicLinkLD.setValue(null);
-                        }
-                        else if (dl == null && currProgressDialog == null)
-                        {
-                            createProgressDialog(R.string.building_link);
-                            //createDynamicLinkAsync(dynamicLinkLD);
-                            new DynamicLinkTask(dynamicLinkLD).execute(trashKey, trashType);
-                        }
-                    }
-                });
+                    sharedImageUri = data.getData();
+                }
                 break;
             }
         }
@@ -595,7 +647,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             //show rewarded ad to ad markers
             ShowRewVideoDialog showRewVideoDialog = new ShowRewVideoDialog();
             showRewVideoDialog.show(getSupportFragmentManager(), "showRewardedVideo");
-            findViewById(R.id.add_trash_point_button).setVisibility(View.GONE);
+            addTrashButton.setVisibility(View.GONE);
             return;
         }
         //this is where initial count of markers is set
@@ -641,6 +693,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     @Override
     public void setProgressDialog(RetainableProgressDialog progressDialog)
     {
+        if (progressDialog == null && currProgressDialog != null)
+            currProgressDialog.dismiss();
         currProgressDialog = progressDialog;
     }
 
@@ -648,6 +702,17 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     public RetainableProgressDialog getProgressDialog()
     {
         return currProgressDialog;
+    }
+
+    //checking if user has given required permissions
+    private boolean hasRequiredPermissions()
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            return true;
+        return ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED;
     }
 
     //getting drwable for trash types
@@ -729,50 +794,56 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference)
             {
-                stopSelectingTrashPoint();
-                if (databaseError == null)
+                try
                 {
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(trashPointMarker.getPosition(), 20f));
-
-                    //saving to local db
-                    saveTrashToDB(trashKey, trashType);
-
-                    //saving count and time stamp in shared preferences
-                    SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
-                    SharedPreferences.Editor editor = preferences.edit();
-                    String keyCount = getString(R.string.pref_count);
-                    editor.putInt(keyCount, preferences.getInt(keyCount, 0) - 1);
-                    editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
-                    editor.apply();
-
-                    //add tag to trashmarker
-                    trashPointMarker.setTag(trashPoint);
-
-                    currProgressDialog.dismiss();
-                    setProgressDialog(null);
-
-                    //dialog to show success
-                    final AlertDialog alertDialog = new AlertDialog.Builder(TrashMapActivity.this)
-                            .setView(R.layout.dialog_trash_point_saved)
-                            .create();
-                    alertDialog.show();
-                    new Handler().postDelayed(new Runnable()
+                    stopSelectingTrashPoint();
+                    if (databaseError == null)
                     {
-                        @Override
-                        public void run()
-                        {
-                            alertDialog.dismiss();
-                        }
-                    }, 1500);
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(trashPointMarker.getPosition(), 20f));
 
-                    //updating stats
-                    MutableLiveData<Long> trashCount = myViewModel.getTrashCountLD();
-                    trashCount.setValue(trashCount.getValue() + 1);
-                }
-                //failed to save trshPoint
-                else
+                        //saving to local db
+                        saveTrashToDB(trashKey, trashType);
+
+                        //saving count and time stamp in shared preferences
+                        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = preferences.edit();
+                        String keyCount = getString(R.string.pref_count);
+                        editor.putInt(keyCount, preferences.getInt(keyCount, 0) - 1);
+                        editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
+                        editor.apply();
+
+                        //add tag to trashmarker
+                        trashPointMarker.setTag(trashPoint);
+                        setProgressDialog(null);
+
+                        //dialog to show success
+                        final AlertDialog alertDialog = new AlertDialog.Builder(TrashMapActivity.this)
+                                .setView(R.layout.dialog_trash_point_saved)
+                                .create();
+                        alertDialog.show();
+                        new Handler().postDelayed(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                alertDialog.dismiss();
+                            }
+                        }, 1800);
+
+                        //updating stats
+                        MutableLiveData<Long> trashCount = myViewModel.getTrashCountLD();
+                        trashCount.setValue(trashCount.getValue() + 1);
+                    }
+                    //failed to save trshPoint
+                    else
+                    {
+                        setProgressDialog(null);
+                        trashPointMarker.remove();
+                        Toast.makeText(TrashMapActivity.this, R.string.failed_to_add_trash_point, Toast.LENGTH_LONG).show();
+                    }
+                } catch (NullPointerException npe)
                 {
-                    currProgressDialog.dismiss();
+                    stopSelectingTrashPoint();
                     setProgressDialog(null);
                     trashPointMarker.remove();
                     Toast.makeText(TrashMapActivity.this, R.string.failed_to_add_trash_point, Toast.LENGTH_LONG).show();
@@ -806,15 +877,13 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 trashPointsDbHelper.close();
             }
         };
-
-        Thread thread = new Thread(runnable);
-        thread.start();
+        new Thread(runnable).start();
     }
 
     //stop observing location
     public void stopSelectingTrashPoint()
     {
-        findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
+        addTrashButton.setVisibility(View.VISIBLE);
         stats.setVisibility(View.VISIBLE);
         trashHistoryBtn.setVisibility(View.VISIBLE);
         isSelectingTrashPoint = false;
@@ -840,11 +909,19 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 @Override
                 public void onChanged(@Nullable Location location)
                 {
-                    if (currProgressDialog != null)
+                    if (currProgressDialog!= null && currProgressDialog.getCustomTag().equals(getString(R.string.fetching_location)))
+                    {
                         currProgressDialog.dismiss();
+                        currProgressDialog = null;
+                    }
                     if (location != null)
                     {
                         LatLng newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                        if (googleMap == null)
+                        {
+                            mapFragment.getMapAsync(TrashMapActivity.this);
+                            return;
+                        }
                         if (userMarker == null)
                         {
                             userMarker = googleMap.addMarker(new MarkerOptions()
@@ -855,7 +932,6 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                                             .create(getResources(), R.drawable.marker_user, null))))
                                     .title("Your location"));
                             googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 16f));
-                            locateMe.setVisibility(View.VISIBLE);
                             getSharedDynamicLink();
                         }
                         else
@@ -873,7 +949,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             };
 
             //start observing location
-            locationLD = myViewModel.getUserLocation();
+            locationLD = myViewModel.getUserLocation(getApplicationContext());
             //checking a check on resolution
             locationLD.getResolutionLD().observe(this, new Observer<Status>()
             {
@@ -882,7 +958,6 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 {
                     if (status != null)
                     {
-                        locateMe.setVisibility(View.GONE);
                         if (userMarker != null)
                         {
                             userMarker.remove();
@@ -893,13 +968,23 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                             status.startResolutionForResult(TrashMapActivity.this, REQUEST_RESULTION);
                         } catch (IntentSender.SendIntentException e)
                         {
+                            Toast.makeText(TrashMapActivity.this, R.string.location_error, Toast.LENGTH_LONG).show();
                         }
                     }
                 }
             });
-
             locationLD.observe(TrashMapActivity.this, locationObserver);
         }
+    }
+
+    //checking internet connectivity
+    private boolean hasInternetConnection()
+    {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected())
+            return true;
+        return false;
     }
 
     //requesting permissions
@@ -975,7 +1060,6 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                             trashPoint.setType(pendingDynamicLinkData.getLink().getQueryParameter("type"));
                             showTrashDetails(null, trashPoint);
                         }
-
                     }
                 })
                 .addOnFailureListener(this, new OnFailureListener()
@@ -992,6 +1076,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private void observeShareDynamicLink()
     {
         final MutableLiveData<String> dynamicLinkLD = myViewModel.getShareDynamicLinkLD();
+        dynamicLinkLD.removeObservers(this);
         dynamicLinkLD.observe(this, new Observer<String>()
         {
             @Override
@@ -1002,39 +1087,59 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     if (dynamicLink.equals(""))
                     {
                         createProgressDialog(R.string.building_link);
-                        //createDynamicLinkAsync(dynamicLinkLD);
                         new DynamicLinkTask(dynamicLinkLD).execute(trashKey, trashType);
                     }
                     else if (dynamicLink.equals(" "))
                     {
                         Toast.makeText(TrashMapActivity.this, R.string.please_wait, Toast.LENGTH_SHORT).show();
-                        dynamicLinkLD.removeObservers(TrashMapActivity.this);
+                        //dynamicLinkLD.removeObserver(this);
                         dynamicLinkLD.setValue(null);
                         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                         intent.setType("image/*");
                         startActivityForResult(Intent.createChooser(intent, getString(R.string.choose_image)), REQUEST_SELECT_IMAGE);
                     }
                 }
+                //if building link dialog is visible
                 else if (currProgressDialog != null)
                 {
-                    dynamicLinkLD.removeObservers(TrashMapActivity.this);
+                    dynamicLinkLD.removeObserver(this);
                     if (dynamicLink == null)
                     {
-                        currProgressDialog.dismiss();
                         setProgressDialog(null);
                         Toast.makeText(TrashMapActivity.this, R.string.try_again, Toast.LENGTH_SHORT).show();
-                        return;
+                        sharedImageUri = null;
                     }
-                    //todo: improve share text
-                    Intent sendIntent = new Intent();
-                    sendIntent.setAction(Intent.ACTION_SEND);
-                    sendIntent.putExtra(Intent.EXTRA_TEXT, "Trash found here. Link: " + dynamicLink + "\n It can be fixed");
-                    sendIntent.setType("text/plain");
-                    startActivity(Intent.createChooser(sendIntent, getResources().getText(R.string.share_trash_point)));
+                    else if (sharedImageUri != null)
+                    {
+                        Intent shareImageIntent = ShareCompat.IntentBuilder.from(TrashMapActivity.this)
+                                .setType("image/*")
+                                .setStream(sharedImageUri)
+                                .setText(getString(R.string.trash_share_text_one) + " " + dynamicLink)
+                                .createChooserIntent();
+                        startActivity(Intent.createChooser(shareImageIntent, getString(R.string.share_via)));
 
-                    currProgressDialog.dismiss();
-                    setProgressDialog(null);
-                    dynamicLinkLD.setValue(null);
+                        //copying text to clipboard
+                        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        ClipData clipData = ClipData.newPlainText("trash url", dynamicLink);
+                        clipboardManager.setPrimaryClip(clipData);
+                        Toast.makeText(TrashMapActivity.this, R.string.trash_link_to_clipboard, Toast.LENGTH_LONG).show();
+
+                        setProgressDialog(null);
+                        dynamicLinkLD.setValue(null);
+                        sharedImageUri = null;
+                    }
+                    else
+                    {
+                        Intent sendIntent = new Intent();
+                        sendIntent.setAction(Intent.ACTION_SEND);
+                        sendIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.trash_share_text_one) + " " + dynamicLink +
+                                "\n" + getString(R.string.trash_share_text_two));
+                        sendIntent.setType("text/plain");
+                        startActivity(Intent.createChooser(sendIntent, getResources().getText(R.string.share_trash_point)));
+
+                        setProgressDialog(null);
+                        dynamicLinkLD.setValue(null);
+                    }
                 }
             }
         });
@@ -1047,6 +1152,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         args.putInt("msg", msgId);
         RetainableProgressDialog progressDialog = new RetainableProgressDialog();
         progressDialog.setArguments(args);
+        progressDialog.setCustomTag(getString(msgId));
         progressDialog.show(getSupportFragmentManager(), "progressDialog");
         setProgressDialog(progressDialog);
     }
@@ -1072,21 +1178,103 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 .setImageDrawable(VectorDrawableCompat.create(getResources(), R.drawable.ic_tap, null));
     }
 
+    //start tutorial
+    private void startTutorial()
+    {
+        View views[] = {locateMe, stats, trashHistoryBtn, addTrashButton};
+        for (View view : views) view.setVisibility(View.INVISIBLE);
+        findViewById(R.id.tutorial).setVisibility(View.VISIBLE);
+
+        //adding dummy marker
+        LatLng dummyLatLng = new LatLng(18.584449, 73.735446);
+        dummyMarker = googleMap.addMarker(new MarkerOptions()
+                .position(dummyLatLng)
+                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmap(getTrashDrawable("land")))));
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(dummyLatLng, 18f));
+        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener()
+        {
+            @Override
+            public boolean onMarkerClick(Marker marker)
+            {
+                //dummy trash details
+                View view = getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
+                ((TextView) view.findViewById(R.id.votes_dirty_count)).setText("88");
+                ((TextView) view.findViewById(R.id.votes_clean_count)).setText("10");
+                ((AppCompatTextView)view.findViewById(R.id.title)).setText(R.string.sample_title);
+                ((AppCompatTextView)view.findViewById(R.id.date)).setText(R.string.sample_more);
+                view.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
+                view.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
+                view.findViewById(R.id.native_ad).setVisibility(View.GONE);
+                new AlertDialog.Builder(TrashMapActivity.this)
+                        .setView(view)
+                        .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener()
+                        {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which)
+                            {
+                                //final dialog
+                                new AlertDialog.Builder(TrashMapActivity.this)
+                                        .setTitle(R.string.thats_it)
+                                        .setMessage(R.string.tutorial_finish_msg)
+                                        .setPositiveButton(R.string.done, new DialogInterface.OnClickListener()
+                                        {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which)
+                                            {
+                                                stopTutorial();
+                                                getPreferences(MODE_PRIVATE).edit()
+                                                        .putBoolean(getString(R.string.pref_tutorial_done), true).apply();
+                                            }
+                                        })
+                                        .create()
+                                        .show();
+                            }
+                        })
+                        .create()
+                        .show();
+                return true;
+            }
+        });
+
+        //shwoing tutorial dialogs
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.hey_user)
+                .setMessage(R.string.tutorial_msg)
+                .setPositiveButton(R.string.next, null)
+                .create()
+                .show();
+
+    }
+
+    private void stopTutorial()
+    {
+        findViewById(R.id.tutorial).setVisibility(View.GONE);
+        View views[] = {locateMe, stats, trashHistoryBtn, addTrashButton};
+        for (View view : views) view.setVisibility(View.VISIBLE);
+        getPreferences(MODE_PRIVATE).edit()
+                .putBoolean(getString(R.string.pref_tutorial_done), true).apply();
+
+        if (dummyMarker != null)
+            dummyMarker.remove();
+
+        onMapReady(googleMap);
+    }
+
     //showing stats dialog
     private void showStatsDialog()
     {
         View view = getLayoutInflater().inflate(R.layout.dialog_stats, null);
         //since_last_visit label
-        ((AppCompatTextView)view.findViewById(R.id.last_visit_label))
+        ((AppCompatTextView) view.findViewById(R.id.last_visit_label))
                 .setCompoundDrawablesWithIntrinsicBounds(VectorDrawableCompat.create(getResources(), R.drawable.ic_stats, null),
                         null, null, null);
         //then
-        AppCompatTextView then = ((AppCompatTextView)view.findViewById(R.id.then));
+        AppCompatTextView then = ((AppCompatTextView) view.findViewById(R.id.then));
         then.setText(stats_then.getText() + " " + getString(R.string.trash_points));
         then.setCompoundDrawablesWithIntrinsicBounds(VectorDrawableCompat.create(getResources(), R.drawable.ic_then, null),
                 null, null, null);
         //now
-        AppCompatTextView now = ((AppCompatTextView)view.findViewById(R.id.now));
+        AppCompatTextView now = ((AppCompatTextView) view.findViewById(R.id.now));
         now.setText(stats_now.getText() + " " + getString(R.string.trash_points));
         now.setCompoundDrawablesWithIntrinsicBounds(VectorDrawableCompat.create(getResources(), R.drawable.ic_now, null),
                 null, null, null);
@@ -1095,14 +1283,15 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 .create();
         alertDialog.show();
     }
+
     //Rewarded videoAdListener Events
     @Override
     public void onRewardedVideoAdLoaded()
     {
-        if (currProgressDialog != null)
+        if (currProgressDialog != null && currProgressDialog.getCustomTag().equals(getString(R.string.loading_video)))
         {
             currProgressDialog.dismiss();
-            setProgressDialog(null);
+            currProgressDialog = null;
             rewardedVideoAd.show();
         }
     }
@@ -1140,8 +1329,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         if (currProgressDialog != null)
         {
             currProgressDialog.dismiss();
-            setProgressDialog(null);
-            findViewById(R.id.add_trash_point_button).setVisibility(View.VISIBLE);
+            currProgressDialog = null;
+            addTrashButton.setVisibility(View.VISIBLE);
         }
         Toast.makeText(this, R.string.failed_to_load_ad, Toast.LENGTH_SHORT).show();
     }
@@ -1187,16 +1376,16 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
 
         if (accelerometerReadings != null && geomagnetometerReadings != null)
         {
-                // orientation contains azimut, pitch and roll
-                if(SensorManager.getRotationMatrix(rotationMatrix,null, accelerometerReadings, geomagnetometerReadings))
-                {
-                    SensorManager.getOrientation(rotationMatrix, orientationAngles);
-                    float azimuth = (float) Math.toDegrees(orientationAngles[0]);;
-                    float rotation = (azimuth + 360) % 360;
-                    if (userMarker != null)
-                        userMarker.setRotation(-rotation);
-                    //Log.i("Direction", String.valueOf(azimut) + " " + rotation);
-                }
+            // orientation contains azimut, pitch and roll
+            if (SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReadings, geomagnetometerReadings))
+            {
+                SensorManager.getOrientation(rotationMatrix, orientationAngles);
+                float azimuth = (float) Math.toDegrees(orientationAngles[0]);;
+                float rotation = (azimuth + 360) % 360;
+                if (userMarker != null)
+                    userMarker.setRotation(rotation);
+                //Log.i("Direction", String.valueOf(azimut) + " " + rotation);
+            }
         }
     }
 
@@ -1205,146 +1394,80 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
 
     }
+}
 
-    //AsyncTask to get short dynamicLink fromm REST API
-    static class DynamicLinkTask extends AsyncTask<String, Void, String>
+//AsyncTask to get short dynamicLink fromm REST API
+class DynamicLinkTask extends AsyncTask<String, Void, String>
+{
+    MutableLiveData<String> dynamicLinkLD;
+
+    DynamicLinkTask(MutableLiveData<String> dynamicLinkLD)
     {
-        MutableLiveData<String> dynamicLinkLD;
+        this.dynamicLinkLD = dynamicLinkLD;
+    }
 
-        DynamicLinkTask(MutableLiveData<String> dynamicLinkLD)
+    @Override
+    protected String doInBackground(String... trashKeyNtype)
+    {
+        HttpURLConnection conn = null;
+
+        try
         {
-            this.dynamicLinkLD = dynamicLinkLD;
-        }
+            URL url = new URL("https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=AIzaSyAXZXsUErx0mnIHbWyLRFp4dEn22VAGsqs");
+            String deepLink = URLEncoder.encode("https://mindyourearth.com?id=" + trashKeyNtype[0] + "&type=" + trashKeyNtype[1],
+                    "UTF-8");
 
-        @Override
-        protected String doInBackground(String... trashKeyNtype)
-        {
-            HttpURLConnection conn = null;
+            JSONObject postDataParams = new JSONObject();
+            postDataParams.put("longDynamicLink", "https://t34cg.app.goo.gl/?link=" + deepLink +
+                    "&apn=com.mindyourearth.planet" +
+                    "&dfl=https://play.google.com/store/apps/details?id=com.mindyourearth.planet");
+            JSONObject suffixJson = new JSONObject();
+            suffixJson.put("option", "SHORT");
+            postDataParams.put("suffix", suffixJson);
 
-            try
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setUseCaches(false);
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setReadTimeout(15000 /* milliseconds */);
+            conn.setConnectTimeout(15000 /* milliseconds */);
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+
+            OutputStream os = conn.getOutputStream();
+            os.write(postDataParams.toString().getBytes("UTF-8"));
+            os.close();
+
+            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK)
             {
-                URL url = new URL("https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=AIzaSyAXZXsUErx0mnIHbWyLRFp4dEn22VAGsqs");
-                String deepLink = URLEncoder.encode("https://mye.com?id=" + trashKeyNtype[0] +"&type="+trashKeyNtype[1],
-                        "UTF-8");
+                StringBuffer sb = new StringBuffer("");
+                Scanner sc = new Scanner(conn.getInputStream());
+                while (sc.hasNext())
+                    sb.append(sc.nextLine());
+                JSONObject jsonObject = new JSONObject(sb.toString());
+                sc.close();
 
-                JSONObject postDataParams = new JSONObject();
-                postDataParams.put("longDynamicLink", "https://t34cg.app.goo.gl/?link=" + deepLink +
-                        "&apn=com.mindyourearth.planet");
-                JSONObject suffixJson = new JSONObject();
-                suffixJson.put("option", "SHORT");
-                postDataParams.put("suffix", suffixJson);
-
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setUseCaches(false);
-                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                conn.setReadTimeout(15000 /* milliseconds */);
-                conn.setConnectTimeout(15000 /* milliseconds */);
-                conn.setRequestMethod("POST");
-                conn.setDoOutput(true);
-
-                OutputStream os = conn.getOutputStream();
-                os.write(postDataParams.toString().getBytes("UTF-8"));
-                os.close();
-
-                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK)
-                {
-                    StringBuffer sb = new StringBuffer("");
-                    Scanner sc = new Scanner(conn.getInputStream());
-                    while (sc.hasNext())
-                        sb.append(sc.nextLine());
-                    JSONObject jsonObject = new JSONObject(sb.toString());
-                    sc.close();
-
-                    if (conn != null)
-                        conn.disconnect();
-                    return jsonObject.getString("shortLink");
-                }
-                else
-                {
-                    if (conn != null)
-                        conn.disconnect();
-                    return null;
-                }
-            } catch (Exception e)
+                if (conn != null)
+                    conn.disconnect();
+                return jsonObject.getString("shortLink");
+            }
+            else
             {
                 if (conn != null)
                     conn.disconnect();
                 return null;
             }
-        }
-
-        @Override
-        protected void onPostExecute(String dl)
+        } catch (Exception e)
         {
-            dynamicLinkLD.setValue(dl);
+            if (conn != null)
+                conn.disconnect();
+            return null;
         }
     }
-}
 
-//view model for this activity
-class MyViewModel extends AndroidViewModel
-{
-    //user's Location data
-    private LocationLiveData locationLiveData;
-    private MutableLiveData<List<Object>> trashPointsSnapShotOrErrorLD = new MutableLiveData<>();
-    private MutableLiveData<Integer> userVoteLD = new MutableLiveData<>();
-    private MutableLiveData<Long> trashCountLD = new MutableLiveData<>();
-    private MutableLiveData<String> shareDynamicLinkLD = new MutableLiveData<>();
-
-    public MyViewModel(Application application)
+    @Override
+    protected void onPostExecute(String dl)
     {
-        super(application);
-        userVoteLD.setValue(-2);
-        trashCountLD.setValue(0L);
-    }
-
-    //user location
-    public LocationLiveData getUserLocation()
-    {
-        if (locationLiveData == null)
-            locationLiveData = new LocationLiveData(this.getApplication());
-        return locationLiveData;
-    }
-
-    //getting all trash points
-    public MutableLiveData<List<Object>> getTrashPointsSnapShotLD()
-    {
-        //this list represents success and error elemets
-        //if datasnapshot is null ;i.e; failure
-        final List<Object> trashPointsOrError = new ArrayList<>();
-        DatabaseReference poiRef = FirebaseDatabase.getInstance().getReference("poi");
-        poiRef.addListenerForSingleValueEvent(new ValueEventListener()
-        {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot)
-            {
-                trashPointsOrError.add(0, dataSnapshot);
-                trashPointsSnapShotOrErrorLD.setValue(trashPointsOrError);
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError)
-            {
-                trashPointsOrError.add(0, null);
-                trashPointsSnapShotOrErrorLD.setValue(trashPointsOrError);
-            }
-        });
-        return trashPointsSnapShotOrErrorLD;
-    }
-
-    public MutableLiveData<Integer> getUserVoteLD()
-    {
-        return userVoteLD;
-    }
-
-    public MutableLiveData<String> getShareDynamicLinkLD()
-    {
-        return shareDynamicLinkLD;
-    }
-
-    public MutableLiveData<Long> getTrashCountLD()
-    {
-        return trashCountLD;
+        dynamicLinkLD.setValue(dl);
     }
 }
 
