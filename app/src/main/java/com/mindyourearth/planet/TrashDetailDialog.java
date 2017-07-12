@@ -31,6 +31,7 @@ import android.widget.TextView;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.NativeExpressAdView;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -227,7 +228,7 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
                     //hiding progress bar and setting initial data of the trash point
                     trashDetailView.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
                     canUserVote = trashMapActivity.getDistanceInKms(trashMapActivity.userMarker.getPosition(),
-                            trashPoint.getPostion()) <= 2;
+                            trashPoint.getPostion()) <= trashMapActivity.MAX_DISTANCE;
                     if (!canUserVote)
                     {
                         View[] views =
@@ -569,6 +570,10 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
             {
                 dialogView.findViewById(R.id.progress_bar_removing_tp).setVisibility(View.VISIBLE);
                 trashDetailReference.setValue(null);
+                //Firebase Event logging
+                Bundle params = new Bundle();
+                params.putLong(FirebaseAnalytics.Param.VALUE, 1);
+                ((TrashMapActivity)getActivity()).firebaseAnalytics.logEvent("trash_point_removed", params);
                 break;
             }
         }

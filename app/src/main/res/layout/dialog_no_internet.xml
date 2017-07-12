@@ -6,7 +6,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="@dimen/vertical_margin"
-    android:gravity="center">
+    android:gravity="center"
+    android:background="@color/colorPrimary">
 
     <android.support.v7.widget.AppCompatImageView
         android:layout_width="80dp"
@@ -18,7 +19,7 @@
         android:layout_height="wrap_content"
         android:textSize="@dimen/font_subheading"
         android:text="@string/no_network_msg"
-        android:textColor="@color/text_secondary_icons"
+        android:textColor="@android:color/white"
         android:layout_marginTop="@dimen/vertical_margin"/>
 
 </LinearLayout>

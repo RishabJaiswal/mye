@@ -61,7 +61,7 @@
 
     <!--invalid location dialog-->
     <string name="invalid_location">Location not valid</string>
-    <string name="invalid_location_msg">You can only add trash points 2 km away from your current location</string>
+    <string name="invalid_location_msg">You can only add trash points 1 km away from your current location</string>
 
     <!--saving trash point progress dialog-->
     <string name="saving_data">Saving trash point</string>
@@ -96,7 +96,6 @@
     <string name="trash_link_to_clipboard">Trash link copied to clipboard</string>
     <string name="select_one_to_vote">Select one to vote</string>
     <string name="trash_share_text_one">Trash point located at</string>
-    <string name="trash_share_text_two">It can be improved, if we are willing to take action.</string>
     <string name="link">Link:</string>
 
     <!--trash point removal/reomved-->
@@ -112,13 +111,13 @@
     <string name="enable">ENABLE</string>
 
     <!--rewarded video-->
-    <string name="failed_to_load_ad">Failed to load video</string>
+    <string name="failed_to_load_ad">Failed to load</string>
     <string name="loading_video">Loading video</string>
 
     <!--adMob ids-->
-    <string name="ad_app_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="ad_rewarded_adunit_id" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
-    <string name="ad_native_adunit_id" translatable="false">ca-app-pub-3940256099942544/2793859312</string>
+    <string name="ad_app_id" translatable="false">ca-app-pub-4200151682628675~5857930145</string>
+    <string name="ad_rewarded_adunit_id" translatable="false">ca-app-pub-4200151682628675/1288129748</string>
+    <string name="ad_native_adunit_id" translatable="false">ca-app-pub-4200151682628675/7334663342</string>
     <string name="native_ad_size" translatable="false">280x100</string>
 
 
@@ -144,7 +143,7 @@
     <string name="next">NEXT</string>
     <string name="got_it">Okay, got it</string>
     <string name="thats_it">Voila, that\'s it!</string>
-    <string name="tutorial_finish_msg">Remember, your voting options will only be visible if you are in 2 km range from the trash point.\n\nAlso, to remove a trash point, be in 2 km range from the trash point that satisfies removal criteria.</string>
+    <string name="tutorial_finish_msg">Remember, your voting options will only be visible if you are in 1 km range from the trash point.\n\nAlso, to remove a trash point, be in 1 km range from the trash point that satisfies removal criteria.</string>
     <string name="done">Done</string>
     <string name="sample_title">Dumping sample</string>
     <string name="sample_more">Sample details of trash point</string>

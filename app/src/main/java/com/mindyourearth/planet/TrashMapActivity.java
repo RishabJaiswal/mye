@@ -19,6 +19,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -43,7 +44,6 @@ import android.support.v7.widget.AppCompatButton;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.AppCompatTextView;
 import android.text.format.DateUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -74,6 +74,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -108,7 +109,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private static final int REQUEST_RESULTION = 2;
     private static final int REQUEST_SELECT_IMAGE = 3;
     private static final int MAX_MARKER_COUNT = 3;
-    int maxDistance = 2;
+    private static final float ALPHA = 0.2f;
+    final int MAX_DISTANCE = 1;
     int minVotesToRemove = 100;
     float[] accelerometerReadings = new float[3];
     float[] geomagnetometerReadings = new float[3];
@@ -131,11 +133,13 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private SensorManager sensorManager;
     private float[] rotationMatrix = new float[9];
     private float[] orientationAngles = new float[3];
-    private float alpha = 0.97f;
     private AppCompatButton addTrashButton;
     private SupportMapFragment mapFragment;
     private Marker dummyMarker;
     private Uri sharedImageUri;
+    private double floatBearing;
+    private GeomagneticField gmf;
+    FirebaseAnalytics firebaseAnalytics;
 
     @Override
     protected void attachBaseContext(Context newBase)
@@ -165,6 +169,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         saveTrashPointFab.setOnClickListener(this);
         undoTrashMarkingFab.setOnClickListener(this);
         findViewById(R.id.trash_history).setOnClickListener(this);
+        tapOnMap.setOnClickListener(this);
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
         //checking if location is being observed on configuration changes too
@@ -188,8 +193,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         loadMap();
 
         //setting add trash button
@@ -220,6 +224,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         });
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this);
     }
 
     private void loadMap()
@@ -416,7 +421,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         }
 
         //checking if distance is greater than 5 kms
-        else if (getDistanceInKms(latLng, userMarker.getPosition()) > 2)
+        else if (getDistanceInKms(latLng, userMarker.getPosition()) > MAX_DISTANCE)
         {
             AlertDialog alertDialog = new AlertDialog.Builder(this)
                     .setTitle(R.string.invalid_location)
@@ -833,6 +838,11 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                         //updating stats
                         MutableLiveData<Long> trashCount = myViewModel.getTrashCountLD();
                         trashCount.setValue(trashCount.getValue() + 1);
+
+                        //Firebase Event logging
+                        Bundle params = new Bundle();
+                        params.putLong(FirebaseAnalytics.Param.VALUE, 1);
+                        firebaseAnalytics.logEvent("trash_point_added", params);
                     }
                     //failed to save trshPoint
                     else
@@ -909,7 +919,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 @Override
                 public void onChanged(@Nullable Location location)
                 {
-                    if (currProgressDialog!= null && currProgressDialog.getCustomTag().equals(getString(R.string.fetching_location)))
+                    if (currProgressDialog != null && currProgressDialog.getCustomTag().equals(getString(R.string.fetching_location)))
                     {
                         currProgressDialog.dismiss();
                         currProgressDialog = null;
@@ -945,6 +955,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                         Toast.makeText(TrashMapActivity.this, R.string.location_error, Toast.LENGTH_LONG).show();
                         //todo: handle connection error
                     }
+                    gmf = new GeomagneticField((float) location.getLatitude(), (float) location.getLongitude(),
+                            (float) location.getAltitude(), System.currentTimeMillis());
                 }
             };
 
@@ -1067,7 +1079,6 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     @Override
                     public void onFailure(@NonNull Exception e)
                     {
-                        Log.w("DL ", "getDynamicLink:onFailure", e);
                     }
                 });
     }
@@ -1132,8 +1143,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                     {
                         Intent sendIntent = new Intent();
                         sendIntent.setAction(Intent.ACTION_SEND);
-                        sendIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.trash_share_text_one) + " " + dynamicLink +
-                                "\n" + getString(R.string.trash_share_text_two));
+                        sendIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.trash_share_text_one) + " " + dynamicLink);
                         sendIntent.setType("text/plain");
                         startActivity(Intent.createChooser(sendIntent, getResources().getText(R.string.share_trash_point)));
 
@@ -1200,11 +1210,12 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 View view = getLayoutInflater().inflate(R.layout.dialog_details_trash_point, null);
                 ((TextView) view.findViewById(R.id.votes_dirty_count)).setText("88");
                 ((TextView) view.findViewById(R.id.votes_clean_count)).setText("10");
-                ((AppCompatTextView)view.findViewById(R.id.title)).setText(R.string.sample_title);
-                ((AppCompatTextView)view.findViewById(R.id.date)).setText(R.string.sample_more);
+                ((AppCompatTextView) view.findViewById(R.id.title)).setText(R.string.sample_title);
+                ((AppCompatTextView) view.findViewById(R.id.date)).setText(R.string.sample_more);
                 view.findViewById(R.id.progress_bar_votes).setVisibility(View.INVISIBLE);
                 view.findViewById(R.id.you_say).setVisibility(View.VISIBLE);
                 view.findViewById(R.id.native_ad).setVisibility(View.GONE);
+                view.findViewById(R.id.menu_icon).setVisibility(View.INVISIBLE);
                 new AlertDialog.Builder(TrashMapActivity.this)
                         .setView(view)
                         .setPositiveButton(R.string.got_it, new DialogInterface.OnClickListener()
@@ -1355,44 +1366,45 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     public void onSensorChanged(SensorEvent event)
     {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
-        {
-            accelerometerReadings[0] = alpha * accelerometerReadings[0] + (1 - alpha)
-                    * event.values[0];
-            accelerometerReadings[1] = alpha * accelerometerReadings[1] + (1 - alpha)
-                    * event.values[1];
-            accelerometerReadings[2] = alpha * accelerometerReadings[2] + (1 - alpha)
-                    * event.values[2];
-        }
+            accelerometerReadings = filter(event.values, accelerometerReadings);
+        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+            geomagnetometerReadings = filter(event.values, geomagnetometerReadings);
 
-        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
-        {
-            geomagnetometerReadings[0] = alpha * geomagnetometerReadings[0] + (1 - alpha)
-                    * event.values[0];
-            geomagnetometerReadings[1] = alpha * geomagnetometerReadings[1] + (1 - alpha)
-                    * event.values[1];
-            geomagnetometerReadings[2] = alpha * geomagnetometerReadings[2] + (1 - alpha)
-                    * event.values[2];
-        }
+        // Get rotation matrix given the gravity and geomagnetic matrices
+        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReadings, geomagnetometerReadings);
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
 
-        if (accelerometerReadings != null && geomagnetometerReadings != null)
-        {
-            // orientation contains azimut, pitch and roll
-            if (SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReadings, geomagnetometerReadings))
-            {
-                SensorManager.getOrientation(rotationMatrix, orientationAngles);
-                float azimuth = (float) Math.toDegrees(orientationAngles[0]);;
-                float rotation = (azimuth + 360) % 360;
-                if (userMarker != null)
-                    userMarker.setRotation(rotation);
-                //Log.i("Direction", String.valueOf(azimut) + " " + rotation);
-            }
-        }
+        // Convert from radians to degrees
+        floatBearing = Math.toDegrees(orientationAngles[0]); // degrees east of true
+        // north (180 to -180)
+
+        // Compensate for the difference between true north and magnetic north
+        if (gmf != null) floatBearing += gmf.getDeclination();
+
+        // adjust to 0-360
+        if (floatBearing < 0) floatBearing += 360;
+        if (userMarker != null)
+            userMarker.setRotation((float) floatBearing);
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy)
     {
 
+    }
+
+    private float[] filter(float[] input, float[] prev)
+    {
+        if (input == null || prev == null)
+            throw new NullPointerException("input and prev float arrays must be non-NULL");
+        if (input.length != prev.length)
+            throw new IllegalArgumentException("input and prev must be the same length");
+
+        for (int i = 0; i < input.length; i++)
+        {
+            prev[i] = prev[i] + ALPHA * (input[i] - prev[i]);
+        }
+        return prev;
     }
 }
 

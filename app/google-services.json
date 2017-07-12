@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "664395733843-2ehao95jbe29gmiuhr78ghul1b5r8j45.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mindyourearth.planet",
+            "certificate_hash": "6e31ab3dd6ab25733e5bad98a434db57e20fbe02"
+          }
+        },
+        {
           "client_id": "664395733843-t81bs87ujtd7eemq4jr3cg9cf1d6cn7s.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
