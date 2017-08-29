@@ -685,7 +685,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
 
             }
         }
-        else
+        else if (googleMap != null)
             googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userMarker.getPosition(), 19f));
 
         tagForMarkerBitmap = tag;
@@ -1067,10 +1067,14 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                         // Get deep link from result (may be null if no link is found)
                         if (pendingDynamicLinkData != null)
                         {
-                            TrashPoint trashPoint = new TrashPoint();
-                            trashPoint.setKey(pendingDynamicLinkData.getLink().getQueryParameter("id"));
-                            trashPoint.setType(pendingDynamicLinkData.getLink().getQueryParameter("type"));
-                            showTrashDetails(null, trashPoint);
+                            Uri deepLinkUri = pendingDynamicLinkData.getLink();
+                            if (deepLinkUri.toString().startsWith("https://mindyourearth.com?id="))
+                            {
+                                TrashPoint trashPoint = new TrashPoint();
+                                trashPoint.setKey(deepLinkUri.getQueryParameter("id"));
+                                trashPoint.setType(deepLinkUri.getQueryParameter("type"));
+                                showTrashDetails(null, trashPoint);
+                            }
                         }
                     }
                 })
