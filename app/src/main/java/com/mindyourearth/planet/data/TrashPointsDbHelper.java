@@ -10,8 +10,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class TrashPointsDbHelper extends SQLiteOpenHelper
 {
-    public static final int DATABASE_VERIOSN = 1;
-    public static final String DATABASE_NAME = "TrashPoints.db";
+    private static final int DATABASE_VERIOSN = 1;
+    private static final String DATABASE_NAME = "TrashPoints.db";
 
     private static final String SQL_CREATE_ENTRIES =
             "CREATE TABLE " + TrashPointsContract.TrashEntry.TABLE_NAME + " (" +

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/trash_history"
+        android:title="@string/your_trash_points"/>
+
+    <item
+        android:id="@+id/satellite_view"
+        android:title="@string/satellite_view"/>
+</menu>

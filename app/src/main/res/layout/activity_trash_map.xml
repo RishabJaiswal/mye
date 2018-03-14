@@ -47,11 +47,12 @@
 
     <!--show history button-->
     <android.support.v7.widget.AppCompatImageView
-        android:id="@+id/trash_history"
+        android:id="@+id/options_menu_btn"
         android:elevation="2dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        map:srcCompat="@drawable/ic_history"
+        map:srcCompat="@drawable/ic_more_options"
+        android:tint="#fff"
         android:padding="8dp"
         android:background="@drawable/semi_circle"
         map:layout_constraintEnd_toEndOf="parent"

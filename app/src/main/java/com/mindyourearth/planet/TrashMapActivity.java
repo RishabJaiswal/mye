@@ -43,8 +43,9 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatButton;
 import android.support.v7.widget.AppCompatImageView;
 import android.support.v7.widget.AppCompatTextView;
-import android.text.format.DateUtils;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -92,7 +93,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
@@ -103,7 +103,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         AgreementDialog.AgreementAcceptCallback, TrashDumpingSelectDialog.TrashTypeSelectListener,
         RetainableProgressDialog.ProgressableActivity, RewardedVideoAdListener,
         ShowRewVideoDialog.ShowRewVideoListener, UserHistoryDialog.HistoryItemClickListener,
-        SensorEventListener
+        SensorEventListener, PopupMenu.OnMenuItemClickListener
 {
     private static final int REQUEST_PERMISSIONS = 1;
     private static final int REQUEST_RESULTION = 2;
@@ -125,7 +125,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private GoogleMap googleMap;
     Marker userMarker, trashPointMarker;
     private RetainableProgressDialog currProgressDialog;
-    View tapOnMap, locateMe, stats, trashHistoryBtn;
+    View tapOnMap, locateMe, stats, optionsMenuBtn;
     FloatingActionButton saveTrashPointFab, undoTrashMarkingFab;
     private RewardedVideoAd rewardedVideoAd;
     private SharedPreferences permissionStatus;
@@ -140,6 +140,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private double floatBearing;
     private GeomagneticField gmf;
     FirebaseAnalytics firebaseAnalytics;
+    private PopupMenu optionsPopupMenu;
 
     @Override
     protected void attachBaseContext(Context newBase)
@@ -159,7 +160,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         tapOnMap = findViewById(R.id.tap_on_map);
         locateMe = findViewById(R.id.locate_me);
         stats = findViewById(R.id.stats);
-        trashHistoryBtn = findViewById(R.id.trash_history);
+        optionsMenuBtn = findViewById(R.id.options_menu_btn);
         stats_then = (TextView) findViewById(R.id.stat_then);
         stats_now = (TextView) findViewById(R.id.stat_now);
         saveTrashPointFab = (FloatingActionButton) findViewById(R.id.save_trash_point);
@@ -168,8 +169,8 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         locateMe.setOnClickListener(this);
         saveTrashPointFab.setOnClickListener(this);
         undoTrashMarkingFab.setOnClickListener(this);
-        findViewById(R.id.trash_history).setOnClickListener(this);
         tapOnMap.setOnClickListener(this);
+        optionsMenuBtn.setOnClickListener(this);
         myViewModel = ViewModelProviders.of(this).get(MyViewModel.class);
 
         //checking if location is being observed on configuration changes too
@@ -183,7 +184,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             {
                 addTrashButton.setVisibility(View.GONE);
                 stats.setVisibility(View.GONE);
-                trashHistoryBtn.setVisibility(View.GONE);
+                optionsMenuBtn.setVisibility(View.GONE);
                 if (tagForMarkerBitmap != null)
                 {
                     tapOnMap.setVisibility(View.VISIBLE);
@@ -446,7 +447,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     @Override
     public boolean onMarkerClick(Marker marker)
     {
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(), 18f));
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(), 21f));
         return showTrashDetails(marker, null);
     }
 
@@ -559,10 +560,15 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                 hideSaveMarkerFabs();
                 break;
             }
-            case R.id.trash_history:
+            case R.id.options_menu_btn:
             {
-                UserHistoryDialog historyDialog = new UserHistoryDialog();
-                historyDialog.show(getSupportFragmentManager(), "userHistory");
+                if(optionsPopupMenu == null)
+                {
+                    optionsPopupMenu = new PopupMenu(this, view);
+                    optionsPopupMenu.inflate(R.menu.options_menu);
+                    optionsPopupMenu.setOnMenuItemClickListener(this);
+                }
+                optionsPopupMenu.show();
                 break;
             }
             case R.id.stats:
@@ -632,12 +638,10 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
         SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
         String keyCount = getString(R.string.pref_count);
-        String keyLastMarkerTimeStamp = getString(R.string.pref_last_marker_timestamp);
         int markerCount = getPreferences(Context.MODE_PRIVATE).getInt(keyCount, -1);
-        long lastMarkerTimestamp = preferences.getLong(keyLastMarkerTimeStamp, 1);
 
         //setting up rewarded video ads
-        if (!rewardedVideoAd.isLoaded() || markerCount == 1)
+        if (!rewardedVideoAd.isLoaded() && (markerCount == 1 || markerCount == 0))
         {
             AdRequest adRequest = new AdRequest.Builder()
                     .addTestDevice(AdRequest.DEVICE_ID_EMULATOR)
@@ -646,7 +650,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
         }
 
         //checking if markers are expired
-        if (markerCount == 0 && DateUtils.isToday(lastMarkerTimestamp))
+        if (markerCount == 0)
         {
             //todo: handle this when all markers exhausted
             //show rewarded ad to ad markers
@@ -656,14 +660,14 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             return;
         }
         //this is where initial count of markers is set
-        else if (markerCount == -1 || !DateUtils.isToday(lastMarkerTimestamp))
+        else if (markerCount == -1)
             preferences.edit().putInt(keyCount, MAX_MARKER_COUNT).apply();
 
         //show dialog to choose type of pollution
         TrashDumpingSelectDialog trashDumpingSelectDialog = new TrashDumpingSelectDialog();
         trashDumpingSelectDialog.show(getSupportFragmentManager(), "selectTrashType");
         stats.setVisibility(View.GONE);
-        trashHistoryBtn.setVisibility(View.GONE);
+        optionsMenuBtn.setVisibility(View.GONE);
         isTrashSelectDialogVisible = true;
         isSelectingTrashPoint = true;
     }
@@ -814,7 +818,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
                         SharedPreferences.Editor editor = preferences.edit();
                         String keyCount = getString(R.string.pref_count);
                         editor.putInt(keyCount, preferences.getInt(keyCount, 0) - 1);
-                        editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
+                        //editor.putLong(getString(R.string.pref_last_marker_timestamp), new Date().getTime());
                         editor.apply();
 
                         //add tag to trashmarker
@@ -895,7 +899,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     {
         addTrashButton.setVisibility(View.VISIBLE);
         stats.setVisibility(View.VISIBLE);
-        trashHistoryBtn.setVisibility(View.VISIBLE);
+        optionsMenuBtn.setVisibility(View.VISIBLE);
         isSelectingTrashPoint = false;
         isTrashSelectDialogVisible = false;
         googleMap.setOnMapClickListener(null);
@@ -1195,7 +1199,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     //start tutorial
     private void startTutorial()
     {
-        View views[] = {locateMe, stats, trashHistoryBtn, addTrashButton};
+        View views[] = {locateMe, stats, optionsMenuBtn, addTrashButton};
         for (View view : views) view.setVisibility(View.INVISIBLE);
         findViewById(R.id.tutorial).setVisibility(View.VISIBLE);
 
@@ -1264,7 +1268,7 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
     private void stopTutorial()
     {
         findViewById(R.id.tutorial).setVisibility(View.GONE);
-        View views[] = {locateMe, stats, trashHistoryBtn, addTrashButton};
+        View views[] = {locateMe, stats, optionsMenuBtn, addTrashButton};
         for (View view : views) view.setVisibility(View.VISIBLE);
         getPreferences(MODE_PRIVATE).edit()
                 .putBoolean(getString(R.string.pref_tutorial_done), true).apply();
@@ -1409,6 +1413,35 @@ public class TrashMapActivity extends LifecycleActivity implements OnMapReadyCal
             prev[i] = prev[i] + ALPHA * (input[i] - prev[i]);
         }
         return prev;
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem item)
+    {
+        if(item.getItemId() == R.id.trash_history)
+        {
+            UserHistoryDialog historyDialog = new UserHistoryDialog();
+            historyDialog.show(getSupportFragmentManager(), "userHistory");
+            return true;
+        }
+        else if(item.getItemId() == R.id.satellite_view)
+        {
+            if(googleMap != null)
+            {
+                if(item.getTitle().equals(getString(R.string.satellite_view)))
+                {
+                    googleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                    item.setTitle(R.string.normal_view);
+                }
+                else
+                {
+                    googleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    item.setTitle(R.string.satellite_view);
+                }
+            }
+            return  true;
+        }
+        return false;
     }
 }
 

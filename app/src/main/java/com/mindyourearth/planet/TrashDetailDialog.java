@@ -344,8 +344,8 @@ public class TrashDetailDialog extends AppCompatDialogFragment implements View.O
         }
 
         //sending trnsaaction
-        DatabaseReference trashPointRef = FirebaseDatabase.getInstance().getReference("poi/" + trashKey);
-        trashPointRef.runTransaction(new Transaction.Handler()
+        FirebaseDatabase.getInstance().getReference("poi/" + trashKey)
+                .runTransaction(new Transaction.Handler()
         {
             TrashPoint trashPoint = null;
 

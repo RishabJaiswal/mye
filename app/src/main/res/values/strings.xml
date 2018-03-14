@@ -147,6 +147,8 @@
     <string name="done">Done</string>
     <string name="sample_title">Dumping sample</string>
     <string name="sample_more">Sample details of trash point</string>
+    <string name="satellite_view">Satellite view</string>
+    <string name="normal_view">Normal view</string>
 
 </resources>
 

@@ -11,7 +11,8 @@ import uk.co.chrisjenx.calligraphy.CalligraphyConfig;
 public class CalligraphyApplication extends Application
 {
     @Override
-    public void onCreate() {
+    public void onCreate()
+    {
         super.onCreate();
         CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
                 .setDefaultFontPath("fonts/regular.otf")

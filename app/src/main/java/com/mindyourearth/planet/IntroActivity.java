@@ -36,6 +36,7 @@ public class IntroActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_intro);
 
+        //setting animated drawable for
         AppCompatImageView happyEarth = (AppCompatImageView) findViewById(R.id.happy_earth);
         final AnimatedVectorDrawableCompat happyEarthAnim = AnimatedVectorDrawableCompat.create(this, R.drawable.happyearth_anim);
         happyEarth.setImageDrawable(happyEarthAnim);

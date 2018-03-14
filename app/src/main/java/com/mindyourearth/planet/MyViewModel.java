@@ -62,6 +62,7 @@ public class MyViewModel extends ViewModel
         return trashPointsSnapShotOrErrorLD;
     }
 
+    //getting user's vote
     public MutableLiveData<Integer> getUserVoteLD()
     {
         if(userVoteLD == null)
@@ -72,11 +73,13 @@ public class MyViewModel extends ViewModel
         return userVoteLD;
     }
 
+    //shareable link of the trash
     public MutableLiveData<String> getShareDynamicLinkLD()
     {
         return shareDynamicLinkLD;
     }
 
+    //to get number of trash points
     public MutableLiveData<Long> getTrashCountLD()
     {
         if(trashCountLD == null)
